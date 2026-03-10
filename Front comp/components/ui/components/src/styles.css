@@ -1,0 +1,337 @@
+/*
+=========================================================
+SETOR 1 — ESTILO GLOBAL
+Ajustes gerais da aplicação inteira
+=========================================================
+*/
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fa;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/*
+=========================================================
+SETOR 2 — LINKS E BOTÕES
+Padroniza transições e aparência interativa
+=========================================================
+*/
+
+a {
+  text-decoration: none;
+}
+
+button,
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/*
+=========================================================
+SETOR 3 — NAVBAR
+Estilo do menu superior
+=========================================================
+*/
+
+.navbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navbar-brand {
+  letter-spacing: 0.3px;
+}
+
+.navbar .nav-link {
+  font-weight: 500;
+}
+
+.navbar .nav-link:hover {
+  opacity: 0.9;
+}
+
+/*
+=========================================================
+SETOR 4 — HERO SECTION
+Estilo da área principal de apresentação
+=========================================================
+*/
+
+#inicio {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+#inicio h1 {
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+#inicio p {
+  max-width: 650px;
+}
+
+/*
+=========================================================
+SETOR 5 — CARDS GERAIS
+Padroniza os cards do sistema
+=========================================================
+*/
+
+.card {
+  border-radius: 18px;
+}
+
+.card.shadow-sm {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+}
+
+.card .card-body {
+  position: relative;
+}
+
+/*
+=========================================================
+SETOR 6 — CARDS DE MÉTRICAS
+Cards pequenos de indicadores rápidos
+=========================================================
+*/
+
+.fs-2.fw-bold {
+  color: #111827;
+}
+
+/*
+=========================================================
+SETOR 7 — PAINEL PRINCIPAL
+Estilização da área do formulário
+=========================================================
+*/
+
+#painel .card {
+  overflow: hidden;
+}
+
+#painel .form-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+#painel .form-control,
+#painel .form-select {
+  border-radius: 12px;
+  min-height: 46px;
+  border: 1px solid #d1d5db;
+}
+
+#painel textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+#painel .form-control:focus,
+#painel .form-select:focus {
+  border-color: #6c8cff;
+  box-shadow: 0 0 0 0.2rem rgba(108, 140, 255, 0.15);
+}
+
+/*
+=========================================================
+SETOR 8 — BLOCO DE UPLOAD
+Área visual de anexar peça base
+=========================================================
+*/
+
+.upload-box {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.upload-box:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+/*
+=========================================================
+SETOR 9 — BARRAS DE PROGRESSO
+Visual das barras do painel e dashboard
+=========================================================
+*/
+
+.progress {
+  height: 10px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+}
+
+.progress-bar {
+  border-radius: 999px;
+}
+
+/*
+=========================================================
+SETOR 10 — TABELA DE HISTÓRICO
+Melhora a aparência da tabela
+=========================================================
+*/
+
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  border-bottom: 1px solid #dee2e6;
+  color: #6b7280;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/*
+=========================================================
+SETOR 11 — SEÇÃO DO FLUXO N8N
+Cards do pipeline
+=========================================================
+*/
+
+#fluxo .card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#fluxo .card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.08) !important;
+}
+
+/*
+=========================================================
+SETOR 12 — DASHBOARD
+Ajustes da área do advogado
+=========================================================
+*/
+
+#dashboard h2,
+#dashboard h3 {
+  color: #111827;
+}
+
+#dashboard .card.bg-light {
+  background-color: #f8fafc !important;
+}
+
+/*
+=========================================================
+SETOR 13 — PRÉVIA DA CONTESTAÇÃO
+Bloco do texto gerado/editado
+=========================================================
+*/
+
+.preview-document {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+
+.preview-document p {
+  color: #374151;
+  line-height: 1.7;
+  text-align: justify;
+}
+
+/*
+=========================================================
+SETOR 14 — CHECKLIST E REGRAS
+Listas do sistema
+=========================================================
+*/
+
+ul {
+  padding-left: 1.2rem;
+}
+
+ul li {
+  margin-bottom: 0.5rem;
+}
+
+/*
+=========================================================
+SETOR 15 — MODAL
+Janela de confirmação após envio
+=========================================================
+*/
+
+.modal-content {
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header,
+.modal-footer {
+  border: none;
+}
+
+/*
+=========================================================
+SETOR 16 — FOOTER
+Rodapé da aplicação
+=========================================================
+*/
+
+footer {
+  margin-top: 2rem;
+}
+
+footer strong {
+  letter-spacing: 0.3px;
+}
+
+/*
+=========================================================
+SETOR 17 — RESPONSIVIDADE
+Ajustes para telas menores
+=========================================================
+*/
+
+@media (max-width: 991px) {
+  #inicio h1 {
+    font-size: 2.2rem;
+  }
+
+  .navbar .btn {
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  #inicio {
+    text-align: center;
+  }
+
+  #inicio p {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .table-responsive {
+    font-size: 0.92rem;
+  }
+}
