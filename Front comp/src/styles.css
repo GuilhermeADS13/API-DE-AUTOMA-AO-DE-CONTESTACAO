@@ -1,7 +1,6 @@
 /*
 =========================================================
 SETOR 1 — ESTILO GLOBAL
-Ajustes gerais da aplicação inteira
 =========================================================
 */
 
@@ -19,7 +18,6 @@ html {
 /*
 =========================================================
 SETOR 2 — LINKS E BOTÕES
-Padroniza transições e aparência interativa
 =========================================================
 */
 
@@ -40,7 +38,6 @@ button:hover,
 /*
 =========================================================
 SETOR 3 — NAVBAR
-Estilo do menu superior
 =========================================================
 */
 
@@ -56,14 +53,9 @@ Estilo do menu superior
   font-weight: 500;
 }
 
-.navbar .nav-link:hover {
-  opacity: 0.9;
-}
-
 /*
 =========================================================
 SETOR 4 — HERO SECTION
-Estilo da área principal de apresentação
 =========================================================
 */
 
@@ -82,8 +74,7 @@ Estilo da área principal de apresentação
 
 /*
 =========================================================
-SETOR 5 — CARDS GERAIS
-Padroniza os cards do sistema
+SETOR 5 — CARDS
 =========================================================
 */
 
@@ -95,31 +86,15 @@ Padroniza os cards do sistema
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
 }
 
-.card .card-body {
-  position: relative;
-}
-
-/*
-=========================================================
-SETOR 6 — CARDS DE MÉTRICAS
-Cards pequenos de indicadores rápidos
-=========================================================
-*/
-
 .fs-2.fw-bold {
   color: #111827;
 }
 
 /*
 =========================================================
-SETOR 7 — PAINEL PRINCIPAL
-Estilização da área do formulário
+SETOR 6 — FORMULÁRIOS
 =========================================================
 */
-
-#painel .card {
-  overflow: hidden;
-}
 
 #painel .form-label {
   font-weight: 600;
@@ -146,8 +121,7 @@ Estilização da área do formulário
 
 /*
 =========================================================
-SETOR 8 — BLOCO DE UPLOAD
-Área visual de anexar peça base
+SETOR 7 — UPLOAD BOX
 =========================================================
 */
 
@@ -167,8 +141,7 @@ SETOR 8 — BLOCO DE UPLOAD
 
 /*
 =========================================================
-SETOR 9 — BARRAS DE PROGRESSO
-Visual das barras do painel e dashboard
+SETOR 8 — PROGRESS
 =========================================================
 */
 
@@ -184,14 +157,9 @@ Visual das barras do painel e dashboard
 
 /*
 =========================================================
-SETOR 10 — TABELA DE HISTÓRICO
-Melhora a aparência da tabela
+SETOR 9 — TABELA
 =========================================================
 */
-
-.table {
-  margin-bottom: 0;
-}
 
 .table thead th {
   border-bottom: 1px solid #dee2e6;
@@ -207,8 +175,7 @@ Melhora a aparência da tabela
 
 /*
 =========================================================
-SETOR 11 — SEÇÃO DO FLUXO N8N
-Cards do pipeline
+SETOR 10 — FLUXO N8N
 =========================================================
 */
 
@@ -223,8 +190,7 @@ Cards do pipeline
 
 /*
 =========================================================
-SETOR 12 — DASHBOARD
-Ajustes da área do advogado
+SETOR 11 — DASHBOARD
 =========================================================
 */
 
@@ -233,14 +199,9 @@ Ajustes da área do advogado
   color: #111827;
 }
 
-#dashboard .card.bg-light {
-  background-color: #f8fafc !important;
-}
-
 /*
 =========================================================
-SETOR 13 — PRÉVIA DA CONTESTAÇÃO
-Bloco do texto gerado/editado
+SETOR 12 — PRÉVIA DA CONTESTAÇÃO
 =========================================================
 */
 
@@ -258,8 +219,7 @@ Bloco do texto gerado/editado
 
 /*
 =========================================================
-SETOR 14 — CHECKLIST E REGRAS
-Listas do sistema
+SETOR 13 — LISTAS
 =========================================================
 */
 
@@ -273,8 +233,7 @@ ul li {
 
 /*
 =========================================================
-SETOR 15 — MODAL
-Janela de confirmação após envio
+SETOR 14 — MODAL
 =========================================================
 */
 
@@ -291,8 +250,7 @@ Janela de confirmação após envio
 
 /*
 =========================================================
-SETOR 16 — FOOTER
-Rodapé da aplicação
+SETOR 15 — FOOTER
 =========================================================
 */
 
@@ -300,14 +258,9 @@ footer {
   margin-top: 2rem;
 }
 
-footer strong {
-  letter-spacing: 0.3px;
-}
-
 /*
 =========================================================
-SETOR 17 — RESPONSIVIDADE
-Ajustes para telas menores
+SETOR 16 — RESPONSIVIDADE
 =========================================================
 */
 

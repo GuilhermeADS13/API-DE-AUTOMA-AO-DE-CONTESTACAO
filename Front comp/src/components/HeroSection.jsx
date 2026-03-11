@@ -1,13 +1,13 @@
 /*
 =========================================================
 SETOR 1 — HERO SECTION
-Essa página mostra a apresentação principal do sistema.
+Apresentação principal do sistema.
 =========================================================
 */
 
-import React from 'react';
-import { Badge, Button, Card, Col, Container, Row } from 'react-bootstrap';
-import { Cpu, ShieldCheck, Upload } from 'react-bootstrap-icons';
+import React from 'react'
+import { Badge, Button, Card, Col, Container, Row } from 'react-bootstrap'
+import { Cpu, ShieldCheck, Upload } from 'react-bootstrap-icons'
 
 export default function HeroSection() {
   return (
@@ -15,7 +15,9 @@ export default function HeroSection() {
       <Container>
         <Row className="align-items-center g-4">
           <Col lg={7}>
-            <Badge bg="primary" className="mb-3">SaaS Jurídico com IA + n8n</Badge>
+            <Badge bg="primary" className="mb-3">
+              SaaS Jurídico com IA + n8n
+            </Badge>
 
             <h1 className="display-5 fw-bold mb-3">
               Edite contestações com apoio de IA, sem perder o padrão jurídico do escritório.
@@ -31,17 +33,13 @@ export default function HeroSection() {
               <Button variant="primary" size="lg" href="#painel">
                 Testar fluxo
               </Button>
+
               <Button variant="outline-secondary" size="lg" href="#dashboard">
                 Ver dashboard
               </Button>
             </div>
           </Col>
 
-          {/*
-          =====================================================
-          SETOR 2 — CARD RESUMO DO SISTEMA
-          =====================================================
-          */}
           <Col lg={5}>
             <Card className="border-0 shadow-sm rounded-4">
               <Card.Body className="p-4">
@@ -84,5 +82,5 @@ export default function HeroSection() {
         </Row>
       </Container>
     </section>
-  );
+  )
 }

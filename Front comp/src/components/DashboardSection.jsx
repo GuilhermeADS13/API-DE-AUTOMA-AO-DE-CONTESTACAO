@@ -1,17 +1,6 @@
-/*
-=========================================================
-SETOR 1 — DASHBOARD DO ADVOGADO
-Essa página mostra:
-- indicadores
-- prévia da contestação
-- status da automação
-- checklist
-=========================================================
-*/
-
-import React from 'react';
-import { Button, Card, Col, Container, ProgressBar, Row } from 'react-bootstrap';
-import { dashboardCards } from '../data/mockData';
+import React from "react";
+import { Button, Card, Col, Container, ProgressBar, Row } from "react-bootstrap";
+import { dashboardCards } from "../data/mockData";
 
 export default function DashboardSection() {
   return (
@@ -24,14 +13,12 @@ export default function DashboardSection() {
               Acompanhe produtividade, casos recentes e status do agente.
             </p>
           </div>
+
           <Button variant="dark">Novo caso</Button>
         </div>
 
-        {/*
-        =====================================================
-        SETOR 2 — CARDS DE INDICADORES
-        =====================================================
-        */}
+        {/* CARDS DE INDICADORES */}
+
         <Row className="g-4 mb-4">
           {dashboardCards.map((card) => (
             <Col md={6} lg={3} key={card.label}>
@@ -46,35 +33,29 @@ export default function DashboardSection() {
         </Row>
 
         <Row className="g-4">
-          {/*
-          ===================================================
-          SETOR 3 — PRÉ-VISUALIZAÇÃO DA CONTESTAÇÃO
-          ===================================================
-          */}
           <Col lg={7}>
             <Card className="border-0 shadow-sm rounded-4 h-100">
               <Card.Body className="p-4">
                 <h3 className="h4 mb-3">Pré-visualização da contestação editada</h3>
 
-                <Card className="bg-light border-0 rounded-4">
+                <Card className="preview-document border-0 rounded-4">
                   <Card.Body className="p-4" style={{ minHeight: 360 }}>
                     <div className="text-center text-secondary mb-4">
                       CONTESTAÇÃO — TRECHO EDITADO PELO AGENTE
                     </div>
 
                     <p className="mb-3">
-                      A parte requerida, por intermédio de seu procurador, apresenta contestação nos autos,
-                      aduzindo preliminarmente a ausência dos pressupostos necessários ao acolhimento integral do pedido inicial.
+                      A parte requerida apresenta contestação nos autos, arguindo preliminarmente a ausência
+                      dos pressupostos necessários ao acolhimento do pedido inicial.
                     </p>
 
                     <p className="mb-3">
-                      Após análise do contexto processual e da documentação fornecida, o agente sugeriu complementação da
-                      fundamentação com foco em inexistência de responsabilidade, impugnação específica dos fatos e reforço
-                      da tese principal indicada pelo usuário.
+                      Após análise do contexto processual, o agente sugeriu complementação da fundamentação
+                      com foco em inexistência de responsabilidade e reforço da tese principal.
                     </p>
 
                     <p className="mb-0">
-                      O texto final permanece subordinado à revisão humana, preservando a estrutura da peça base e os dados processuais.
+                      O texto final permanece subordinado à revisão humana.
                     </p>
                   </Card.Body>
                 </Card>
@@ -88,11 +69,8 @@ export default function DashboardSection() {
             </Card>
           </Col>
 
-          {/*
-          ===================================================
-          SETOR 4 — STATUS E CHECKLIST
-          ===================================================
-          */}
+          {/* STATUS DA AUTOMAÇÃO */}
+
           <Col lg={5}>
             <div className="d-grid gap-4">
               <Card className="border-0 shadow-sm rounded-4">
@@ -105,6 +83,7 @@ export default function DashboardSection() {
                         <span>Recepção do webhook</span>
                         <span>100%</span>
                       </div>
+
                       <ProgressBar now={100} />
                     </div>
 
@@ -113,6 +92,7 @@ export default function DashboardSection() {
                         <span>Processamento do agente</span>
                         <span>84%</span>
                       </div>
+
                       <ProgressBar now={84} />
                     </div>
 
@@ -121,20 +101,24 @@ export default function DashboardSection() {
                         <span>Validação de saída</span>
                         <span>91%</span>
                       </div>
+
                       <ProgressBar now={91} />
                     </div>
                   </div>
                 </Card.Body>
               </Card>
 
+              {/* CHECKLIST */}
+
               <Card className="border-0 shadow-sm rounded-4">
                 <Card.Body className="p-4">
                   <h3 className="h5 mb-3">Checklist antes do envio</h3>
+
                   <ul className="mb-0 text-secondary">
                     <li>Peça base anexada</li>
                     <li>Número do processo informado</li>
                     <li>Tese principal definida</li>
-                    <li>Observações para o agente revisadas</li>
+                    <li>Observações revisadas</li>
                     <li>Validação humana prevista</li>
                   </ul>
                 </Card.Body>

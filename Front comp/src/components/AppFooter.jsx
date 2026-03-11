@@ -1,12 +1,11 @@
 /*
 =========================================================
-SETOR 1 — RODAPÉ DA APLICAÇÃO
-Esse arquivo mostra o footer do sistema.
+SETOR 1 — RODAPÉ
 =========================================================
 */
 
-import React from 'react';
-import { Container } from 'react-bootstrap';
+import React from 'react'
+import { Container } from 'react-bootstrap'
 
 export default function AppFooter() {
   return (
@@ -15,8 +14,9 @@ export default function AppFooter() {
         <div>
           <strong className="text-white">JurisFlow AI</strong> · Frontend React + Bootstrap
         </div>
+
         <div>Automação de contestação com agente de IA e n8n</div>
       </Container>
     </footer>
-  );
+  )
 }

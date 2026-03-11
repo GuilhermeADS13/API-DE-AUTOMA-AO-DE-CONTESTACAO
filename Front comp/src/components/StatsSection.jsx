@@ -1,13 +1,12 @@
 /*
 =========================================================
 SETOR 1 — MÉTRICAS RÁPIDAS
-Esse arquivo mostra os cards de estatísticas do sistema.
 =========================================================
 */
 
-import React from 'react';
-import { Card, Col, Container, Row } from 'react-bootstrap';
-import { stats } from '../data/mockData';
+import React from 'react'
+import { Card, Col, Container, Row } from 'react-bootstrap'
+import { stats } from '../data/mockData'
 
 export default function StatsSection() {
   return (
@@ -27,5 +26,5 @@ export default function StatsSection() {
         </Row>
       </Container>
     </section>
-  );
+  )
 }
