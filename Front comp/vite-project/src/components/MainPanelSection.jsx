@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Badge,
@@ -11,18 +11,57 @@ import {
   Row,
   Table,
 } from "react-bootstrap";
-import { CheckCircle, ClockHistory, Upload } from "react-bootstrap-icons";
-import { agentRules, flowSteps, historyItems } from "../data/mockData";
+import { CheckCircle, ClockHistory, Paperclip, Upload, XCircle } from "react-bootstrap-icons";
+import { agentRules, flowSteps } from "../data/mockData";
 import StatusBadge from "./ui/StatusBadge";
+
+function fileSizeLabel(file) {
+  if (!file) return "";
+  const size = file.size / 1024;
+  if (size < 1024) return `${size.toFixed(1)} KB`;
+  return `${(size / 1024).toFixed(2)} MB`;
+}
 
 export default function MainPanelSection({
   form,
   completion,
   submitted,
   loading,
+  history,
+  formErrors,
+  uploadError,
+  uploadedFile,
+  draftInfo,
+  feedback,
   onChange,
   onSubmit,
+  onFileSelect,
+  onRemoveFile,
+  onSaveDraft,
 }) {
+  const fileInputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const openPicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInput = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    onFileSelect(file);
+    event.target.value = "";
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) onFileSelect(file);
+  };
+
+  const uploadValidation = uploadError || formErrors.upload;
+
   return (
     <>
       <section id="painel" className="py-5">
@@ -52,6 +91,8 @@ export default function MainPanelSection({
                     <ProgressBar now={completion} />
                   </div>
 
+                  {feedback && <Alert variant={feedback.variant}>{feedback.text}</Alert>}
+
                   {submitted && (
                     <Alert variant="success" className="d-flex align-items-center gap-2">
                       <CheckCircle /> Caso enviado com sucesso para o agente juridico.
@@ -68,7 +109,11 @@ export default function MainPanelSection({
                             value={form.processo}
                             onChange={onChange}
                             placeholder="0001234-56.2026.8.00.0000"
+                            isInvalid={Boolean(formErrors.processo)}
                           />
+                          <Form.Control.Feedback type="invalid">
+                            {formErrors.processo}
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
 
@@ -80,14 +125,23 @@ export default function MainPanelSection({
                             value={form.cliente}
                             onChange={onChange}
                             placeholder="Nome da parte"
+                            isInvalid={Boolean(formErrors.cliente)}
                           />
+                          <Form.Control.Feedback type="invalid">
+                            {formErrors.cliente}
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
 
                       <Col md={6}>
                         <Form.Group>
                           <Form.Label>Tipo de acao</Form.Label>
-                          <Form.Select name="tipoAcao" value={form.tipoAcao} onChange={onChange}>
+                          <Form.Select
+                            name="tipoAcao"
+                            value={form.tipoAcao}
+                            onChange={onChange}
+                            isInvalid={Boolean(formErrors.tipoAcao)}
+                          >
                             <option value="">Selecione</option>
                             <option>Acao de cobranca</option>
                             <option>Relacao de consumo</option>
@@ -95,6 +149,9 @@ export default function MainPanelSection({
                             <option>Execucao</option>
                             <option>Obrigacoes contratuais</option>
                           </Form.Select>
+                          <Form.Control.Feedback type="invalid">
+                            {formErrors.tipoAcao}
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
 
@@ -106,7 +163,11 @@ export default function MainPanelSection({
                             value={form.tese}
                             onChange={onChange}
                             placeholder="Ex.: ausencia de responsabilidade"
+                            isInvalid={Boolean(formErrors.tese)}
                           />
+                          <Form.Control.Feedback type="invalid">
+                            {formErrors.tese}
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
 
@@ -120,18 +181,79 @@ export default function MainPanelSection({
                             value={form.observacoes}
                             onChange={onChange}
                             placeholder="Contexto do caso, limites da edicao e pontos de atencao."
+                            isInvalid={Boolean(formErrors.observacoes)}
                           />
+                          <Form.Control.Feedback type="invalid">
+                            {formErrors.observacoes}
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
 
                       <Col xs={12}>
-                        <div className="upload-box">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className={`upload-box ${dragging ? "is-dragging" : ""} ${
+                            uploadedFile ? "has-file" : ""
+                          }`}
+                          onClick={openPicker}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") openPicker();
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            setDragging(true);
+                          }}
+                          onDragLeave={(event) => {
+                            event.preventDefault();
+                            setDragging(false);
+                          }}
+                          onDrop={handleDrop}
+                        >
                           <Upload size={28} className="mb-2" />
                           <div className="fw-semibold">Upload da peca base</div>
                           <small className="text-secondary">
-                            Arraste ou clique para anexar DOCX/PDF.
+                            Arraste ou clique para anexar DOCX, DOC ou PDF.
                           </small>
                         </div>
+
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".doc,.docx,.pdf"
+                          className="d-none"
+                          onChange={handleFileInput}
+                        />
+
+                        {uploadedFile && (
+                          <div className="upload-file-summary mt-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <Paperclip />
+                              <div>
+                                <div className="fw-semibold">{uploadedFile.name}</div>
+                                <small className="text-secondary">
+                                  {fileSizeLabel(uploadedFile)}
+                                </small>
+                              </div>
+                            </div>
+
+                            <Button
+                              variant="link"
+                              className="upload-remove p-0"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onRemoveFile();
+                              }}
+                            >
+                              <XCircle /> Remover
+                            </Button>
+                          </div>
+                        )}
+
+                        {uploadValidation && (
+                          <div className="upload-feedback-error">{uploadValidation}</div>
+                        )}
                       </Col>
                     </Row>
 
@@ -140,10 +262,17 @@ export default function MainPanelSection({
                         {loading ? "Processando..." : "Enviar para automacao"}
                       </Button>
 
-                      <Button type="button" variant="outline-dark">
+                      <Button
+                        type="button"
+                        variant="outline-dark"
+                        disabled={loading}
+                        onClick={onSaveDraft}
+                      >
                         Salvar rascunho
                       </Button>
                     </div>
+
+                    {draftInfo && <div className="draft-info mt-3">{draftInfo}</div>}
                   </Form>
                 </Card.Body>
               </Card>
@@ -185,14 +314,14 @@ export default function MainPanelSection({
       <section className="pb-5">
         <Container>
           <Card className="history-card border-0">
-                <Card.Body className="p-4">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                      <h2 className="h4 mb-1">Historico de documentos</h2>
-                      <p className="text-secondary mb-0">
-                        Visao rapida dos casos recentes e seus status de revisao.
-                      </p>
-                    </div>
+            <Card.Body className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h2 className="h4 mb-1">Historico de documentos</h2>
+                  <p className="text-secondary mb-0">
+                    Visao rapida dos casos recentes e seus status de revisao.
+                  </p>
+                </div>
 
                 <ClockHistory size={20} />
               </div>
@@ -210,7 +339,7 @@ export default function MainPanelSection({
                   </thead>
 
                   <tbody>
-                    {historyItems.map((item) => (
+                    {history.map((item) => (
                       <tr key={item.id}>
                         <td className="fw-semibold">{item.id}</td>
                         <td>{item.naturezaCaso}</td>

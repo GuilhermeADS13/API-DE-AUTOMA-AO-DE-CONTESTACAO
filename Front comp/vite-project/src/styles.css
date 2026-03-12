@@ -276,12 +276,58 @@ p,
   text-align: center;
   color: #294066;
   background: var(--surface-soft);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
 }
 
 .upload-box:hover {
   border-color: #5e89c4;
   transform: translateY(-2px);
+}
+
+.upload-box.is-dragging {
+  border-color: #2d6fd3;
+  background: #edf4ff;
+}
+
+.upload-box.has-file {
+  border-color: #2d9a6f;
+}
+
+.upload-file-summary {
+  border: 1px solid #cfdcf2;
+  background: #fbfdff;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upload-remove {
+  color: #cb3b3b;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.upload-remove:hover {
+  color: #a51f1f;
+}
+
+.upload-feedback-error {
+  margin-top: 0.45rem;
+  color: #b02a37;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.draft-info {
+  font-size: 0.88rem;
+  color: #4d6288;
 }
 
 .flow-row {
@@ -359,6 +405,31 @@ p,
 .status-card .progress-bar {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.checklist-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.checklist-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.7rem;
+}
+
+.checklist-list li svg {
+  flex: 0 0 auto;
+}
+
+.check-ok {
+  color: #1f6e4f;
+}
+
+.check-pending {
+  color: #5d6f8f;
 }
 
 .testimonial-card blockquote {

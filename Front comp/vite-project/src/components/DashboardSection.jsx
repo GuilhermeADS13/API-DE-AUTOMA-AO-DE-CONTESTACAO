@@ -9,7 +9,7 @@ import {
   ProgressBar,
   Row,
 } from "react-bootstrap";
-import { ChatQuote, Stars } from "react-bootstrap-icons";
+import { CheckCircleFill, ChatQuote, ClockHistory, Stars } from "react-bootstrap-icons";
 import { dashboardCards } from "../data/mockData";
 
 const testimonials = [
@@ -52,7 +52,25 @@ const faqItems = [
   },
 ];
 
-export default function DashboardSection() {
+export default function DashboardSection({
+  automationStatus,
+  checklist,
+  previewParagraphs,
+  submitted,
+  reviewSent,
+  onDownloadDoc,
+  onDownloadPdf,
+  onSendReview,
+}) {
+  const checklistItems = [
+    { label: "Peca base anexada", done: checklist.pecaBase },
+    { label: "Dados processuais conferidos", done: checklist.dadosProcessuais },
+    { label: "Tese principal definida", done: checklist.tesePrincipal },
+    { label: "Revisao humana habilitada", done: checklist.revisaoHumana },
+  ];
+
+  const canExport = submitted;
+
   return (
     <section id="dashboard" className="py-5">
       <Container>
@@ -89,30 +107,33 @@ export default function DashboardSection() {
 
                 <Card className="preview-document border-0">
                   <Card.Body className="p-4" style={{ minHeight: 330 }}>
-                    <div className="text-secondary mb-3 small">
+                    <div className="text-secondary mb-3 small d-flex align-items-center gap-2">
+                      <ClockHistory />
                       TRECHO EDITADO PELO AGENTE
                     </div>
 
-                    <p className="mb-3">
-                      A parte requerida apresenta contestacao e destaca ausencia
-                      de pressupostos para procedencia do pedido inicial.
-                    </p>
-
-                    <p className="mb-3">
-                      O agente sugere reforco argumentativo com base na tese
-                      principal, mantendo linguagem formal e estrutura definida.
-                    </p>
-
-                    <p className="mb-0">
-                      O documento segue para revisao humana antes da exportacao.
-                    </p>
+                    {previewParagraphs.map((text) => (
+                      <p key={text} className="mb-3">
+                        {text}
+                      </p>
+                    ))}
                   </Card.Body>
                 </Card>
 
                 <div className="d-flex flex-wrap gap-2 mt-3">
-                  <Button variant="dark">Baixar DOCX</Button>
-                  <Button variant="outline-dark">Baixar PDF</Button>
-                  <Button variant="outline-secondary">Enviar revisao</Button>
+                  <Button variant="dark" onClick={onDownloadDoc} disabled={!canExport}>
+                    Baixar DOCX
+                  </Button>
+                  <Button variant="outline-dark" onClick={onDownloadPdf} disabled={!canExport}>
+                    Baixar PDF
+                  </Button>
+                  <Button
+                    variant={reviewSent ? "success" : "outline-secondary"}
+                    onClick={onSendReview}
+                    disabled={!canExport}
+                  >
+                    {reviewSent ? "Revisao enviada" : "Enviar revisao"}
+                  </Button>
                 </div>
               </Card.Body>
             </Card>
@@ -128,25 +149,25 @@ export default function DashboardSection() {
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
                         <span>Recepcao do webhook</span>
-                        <span>100%</span>
+                        <span>{automationStatus.webhook}%</span>
                       </div>
-                      <ProgressBar now={100} />
+                      <ProgressBar now={automationStatus.webhook} />
                     </div>
 
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
                         <span>Processamento da IA</span>
-                        <span>86%</span>
+                        <span>{automationStatus.ia}%</span>
                       </div>
-                      <ProgressBar now={86} />
+                      <ProgressBar now={automationStatus.ia} />
                     </div>
 
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
                         <span>Validacao de saida</span>
-                        <span>92%</span>
+                        <span>{automationStatus.validacao}%</span>
                       </div>
-                      <ProgressBar now={92} />
+                      <ProgressBar now={automationStatus.validacao} />
                     </div>
                   </div>
                 </Card.Body>
@@ -156,11 +177,13 @@ export default function DashboardSection() {
                 <Card.Body className="p-4">
                   <h3 className="h5 mb-3">Checklist de seguranca</h3>
 
-                  <ul className="mb-0 text-secondary">
-                    <li>Peca base anexada</li>
-                    <li>Dados processuais conferidos</li>
-                    <li>Tese principal definida</li>
-                    <li>Revisao humana habilitada</li>
+                  <ul className="mb-0 text-secondary checklist-list">
+                    {checklistItems.map((item) => (
+                      <li key={item.label} className={item.done ? "check-ok" : "check-pending"}>
+                        <CheckCircleFill />
+                        <span>{item.label}</span>
+                      </li>
+                    ))}
                   </ul>
                 </Card.Body>
               </Card>
