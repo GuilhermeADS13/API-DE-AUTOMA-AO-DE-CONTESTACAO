@@ -9,46 +9,25 @@ import {
   ProgressBar,
   Row,
 } from "react-bootstrap";
-import { CheckCircleFill, ChatQuote, ClockHistory, Stars } from "react-bootstrap-icons";
+import { CheckCircleFill, ClockHistory } from "react-bootstrap-icons";
 import { dashboardCards } from "../data/mockData";
-
-const testimonials = [
-  {
-    quote:
-      "Conseguimos reduzir gargalos de redacao e manter o padrao tecnico em todo o time.",
-    name: "Camila P.",
-    role: "Coordenadora juridica",
-  },
-  {
-    quote:
-      "A equipe passou a focar na estrategia processual enquanto o fluxo cuida da parte repetitiva.",
-    name: "Rafael M.",
-    role: "Advogado contencioso",
-  },
-  {
-    quote:
-      "A integracao com n8n deixou o processo previsivel e muito mais facil de auditar.",
-    name: "Marina L.",
-    role: "Gestora de operacoes",
-  },
-];
 
 const faqItems = [
   {
-    title: "A plataforma gera a peca do zero?",
-    text: "Nao. Ela edita uma peca base, aplica tese e complementa argumentos conforme regras do escritorio.",
+    title: "A plataforma gera a peça do zero?",
+    text: "Não. Ela edita uma peça base, aplica a tese e complementa argumentos conforme as regras do escritório.",
   },
   {
-    title: "Posso manter revisao humana obrigatoria?",
-    text: "Sim. O fluxo foi desenhado para sempre permitir validacao final antes da entrega ao cliente.",
+    title: "Posso manter revisão humana obrigatória?",
+    text: "Sim. A validação final pode permanecer obrigatória antes da entrega ao cliente.",
   },
   {
-    title: "Como funciona a integracao com n8n?",
-    text: "O frontend envia os dados para um webhook e o pipeline do n8n aciona as etapas de classificacao, IA e saida.",
+    title: "Como funciona a integração com n8n?",
+    text: "O frontend envia os dados para um webhook e o n8n executa a automação com rastreabilidade.",
   },
   {
-    title: "Consigo adaptar para outras pecas juridicas?",
-    text: "Sim. A estrutura permite criar trilhas por tipo de acao e reaproveitar componentes do fluxo.",
+    title: "Consigo adaptar para outras peças jurídicas?",
+    text: "Sim. A estrutura permite criar variações por tipo de ação e reaproveitar os componentes principais.",
   },
 ];
 
@@ -63,10 +42,10 @@ export default function DashboardSection({
   onSendReview,
 }) {
   const checklistItems = [
-    { label: "Peca base anexada", done: checklist.pecaBase },
+    { label: "Peça base anexada", done: checklist.pecaBase },
     { label: "Dados processuais conferidos", done: checklist.dadosProcessuais },
     { label: "Tese principal definida", done: checklist.tesePrincipal },
-    { label: "Revisao humana habilitada", done: checklist.revisaoHumana },
+    { label: "Revisão humana habilitada", done: checklist.revisaoHumana },
   ];
 
   const canExport = submitted;
@@ -77,9 +56,9 @@ export default function DashboardSection({
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
           <div>
             <Badge className="section-badge mb-2">Painel executivo</Badge>
-            <h2 className="fw-bold mb-1">Visao de produtividade do escritorio</h2>
+            <h2 className="fw-bold mb-1">Visão de produtividade do escritório</h2>
             <p className="text-secondary mb-0">
-              Controle pipeline, documentos e conformidade em um unico lugar.
+              Controle documentos, status e conformidade em um único lugar.
             </p>
           </div>
 
@@ -103,7 +82,7 @@ export default function DashboardSection({
           <Col lg={7}>
             <Card className="dashboard-card border-0 h-100">
               <Card.Body className="p-4">
-                <h3 className="h4 mb-3">Pre-visualizacao da contestacao</h3>
+                <h3 className="h4 mb-3">Pré-visualização da contestação</h3>
 
                 <Card className="preview-document border-0">
                   <Card.Body className="p-4" style={{ minHeight: 330 }}>
@@ -132,7 +111,7 @@ export default function DashboardSection({
                     onClick={onSendReview}
                     disabled={!canExport}
                   >
-                    {reviewSent ? "Revisao enviada" : "Enviar revisao"}
+                    {reviewSent ? "Revisão enviada" : "Enviar revisão"}
                   </Button>
                 </div>
               </Card.Body>
@@ -143,12 +122,12 @@ export default function DashboardSection({
             <div className="d-grid gap-4">
               <Card className="dashboard-card status-card border-0">
                 <Card.Body className="p-4">
-                  <h3 className="h5 mb-3">Status da automacao</h3>
+                  <h3 className="h5 mb-3">Status da automação</h3>
 
                   <div className="d-grid gap-3">
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
-                        <span>Recepcao do webhook</span>
+                        <span>Recepção do webhook</span>
                         <span>{automationStatus.webhook}%</span>
                       </div>
                       <ProgressBar now={automationStatus.webhook} />
@@ -164,7 +143,7 @@ export default function DashboardSection({
 
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
-                        <span>Validacao de saida</span>
+                        <span>Validação de saída</span>
                         <span>{automationStatus.validacao}%</span>
                       </div>
                       <ProgressBar now={automationStatus.validacao} />
@@ -175,7 +154,7 @@ export default function DashboardSection({
 
               <Card className="dashboard-card border-0">
                 <Card.Body className="p-4">
-                  <h3 className="h5 mb-3">Checklist de seguranca</h3>
+                  <h3 className="h5 mb-3">Checklist de segurança</h3>
 
                   <ul className="mb-0 text-secondary checklist-list">
                     {checklistItems.map((item) => (
@@ -190,40 +169,6 @@ export default function DashboardSection({
             </div>
           </Col>
         </Row>
-
-        <div id="prova-social" className="mt-5">
-          <div className="section-heading text-center mb-4">
-            <Badge className="section-badge mb-2">Prova social</Badge>
-            <h3 className="fw-bold mb-2">Quem usa recomenda</h3>
-            <p className="text-secondary mb-0">
-              Times juridicos reportam ganho real de velocidade e consistencia.
-            </p>
-          </div>
-
-          <Row className="g-4">
-            {testimonials.map((item) => (
-              <Col md={6} lg={4} key={item.name}>
-                <Card className="testimonial-card border-0 h-100">
-                  <Card.Body className="p-4">
-                    <div className="d-flex align-items-center gap-2 mb-3 text-warning">
-                      <Stars />
-                      <span className="small fw-semibold text-dark">Avaliacao positiva</span>
-                    </div>
-
-                    <blockquote>"{item.quote}"</blockquote>
-
-                    <div className="mt-3 small text-secondary d-flex align-items-center gap-2">
-                      <ChatQuote />
-                      <span>
-                        {item.name} - {item.role}
-                      </span>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </div>
 
         <div id="faq" className="mt-5">
           <Row className="justify-content-center">

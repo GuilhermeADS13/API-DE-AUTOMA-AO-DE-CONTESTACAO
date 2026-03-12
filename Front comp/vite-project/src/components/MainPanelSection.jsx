@@ -12,7 +12,7 @@ import {
   Table,
 } from "react-bootstrap";
 import { CheckCircle, ClockHistory, Paperclip, Upload, XCircle } from "react-bootstrap-icons";
-import { agentRules, flowSteps } from "../data/mockData";
+import { agentRules } from "../data/mockData";
 import StatusBadge from "./ui/StatusBadge";
 
 function fileSizeLabel(file) {
@@ -72,7 +72,7 @@ export default function MainPanelSection({
                 <Card.Body className="p-4 p-lg-5">
                   <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
                     <div>
-                      <h2 className="h3 mb-1">Envie sua peca e execute o fluxo</h2>
+                      <h2 className="h3 mb-1">Envie sua peça e execute o fluxo</h2>
                       <p className="text-secondary mb-0">
                         Configure o caso e envie para processamento assistido.
                       </p>
@@ -95,7 +95,7 @@ export default function MainPanelSection({
 
                   {submitted && (
                     <Alert variant="success" className="d-flex align-items-center gap-2">
-                      <CheckCircle /> Caso enviado com sucesso para o agente juridico.
+                      <CheckCircle /> Caso enviado com sucesso para o agente jurídico.
                     </Alert>
                   )}
 
@@ -103,7 +103,7 @@ export default function MainPanelSection({
                     <Row className="g-3">
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Numero do processo</Form.Label>
+                          <Form.Label>Número do processo</Form.Label>
                           <Form.Control
                             name="processo"
                             value={form.processo}
@@ -135,7 +135,7 @@ export default function MainPanelSection({
 
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Tipo de acao</Form.Label>
+                          <Form.Label>Tipo de ação</Form.Label>
                           <Form.Select
                             name="tipoAcao"
                             value={form.tipoAcao}
@@ -173,7 +173,7 @@ export default function MainPanelSection({
 
                       <Col xs={12}>
                         <Form.Group>
-                          <Form.Label>Observacoes para o agente</Form.Label>
+                          <Form.Label>Observações para o agente</Form.Label>
                           <Form.Control
                             as="textarea"
                             rows={4}
@@ -282,27 +282,12 @@ export default function MainPanelSection({
               <div className="d-grid gap-4 h-100">
                 <Card className="side-info-card border-0">
                   <Card.Body className="p-4">
-                    <h3 className="h5 mb-3">Regras da IA juridica</h3>
+                    <h3 className="h5 mb-3">Regras da IA jurídica</h3>
                     <ul className="mb-0 text-secondary">
                       {agentRules.map((rule) => (
                         <li key={rule}>{rule}</li>
                       ))}
                     </ul>
-                  </Card.Body>
-                </Card>
-
-                <Card className="side-info-card border-0">
-                  <Card.Body className="p-4">
-                    <h3 className="h5 mb-3">Fluxo de execucao</h3>
-
-                    <div className="d-grid gap-3">
-                      {flowSteps.map((step, index) => (
-                        <div className="flow-row" key={step}>
-                          <span className="step-index">{index + 1}</span>
-                          <span>{step}</span>
-                        </div>
-                      ))}
-                    </div>
                   </Card.Body>
                 </Card>
               </div>
@@ -317,9 +302,9 @@ export default function MainPanelSection({
             <Card.Body className="p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h2 className="h4 mb-1">Historico de documentos</h2>
+                  <h2 className="h4 mb-1">Histórico de documentos</h2>
                   <p className="text-secondary mb-0">
-                    Visao rapida dos casos recentes e seus status de revisao.
+                    Visão rápida dos casos recentes e seus status de revisão.
                   </p>
                 </div>
 

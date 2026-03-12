@@ -17,12 +17,13 @@ export default function HeroSection() {
             <Badge className="hero-kicker mb-3">Plataforma de IA para advocacia</Badge>
 
             <h1 className="hero-title mb-3">
-              Um dia de trabalho juridico, resolvido em menos de um minuto.
+              Um dia de trabalho jurídico, resolvido em menos de um minuto.
             </h1>
 
             <p className="hero-lead mb-4">
-              Automatize contestacoes, mantenha seu padrao tecnico e ganhe escala
-              com um fluxo integrado de frontend, n8n e agente juridico.
+              O agente jurídico analisa o caso, identifica a tese principal,
+              aprimora a fundamentação e entrega a minuta pronta para revisão
+              humana com padrão técnico do seu escritório.
             </p>
 
             <div className="d-flex flex-wrap gap-2 mb-4">
@@ -30,15 +31,15 @@ export default function HeroSection() {
                 Quero testar agora
               </Button>
 
-              <Button variant="outline-dark" size="lg" href="#fluxo">
-                Ver como funciona
+              <Button variant="outline-dark" size="lg" href="#dashboard">
+                Ver painel
               </Button>
             </div>
 
             <div className="d-flex flex-wrap gap-2">
               <span className="trust-pill">IA treinada no direito brasileiro</span>
-              <span className="trust-pill">Processo padronizado por escritorio</span>
-              <span className="trust-pill">Integracao via webhook no n8n</span>
+              <span className="trust-pill">Processo padronizado por escritório</span>
+              <span className="trust-pill">Revisão final sempre humana</span>
             </div>
           </Col>
 
@@ -57,7 +58,7 @@ export default function HeroSection() {
                   <div className="feature-row">
                     <ClockHistory />
                     <div>
-                      <div className="fw-semibold">Tempo medio por caso</div>
+                      <div className="fw-semibold">Tempo médio por caso</div>
                       <small className="text-secondary">De horas para minutos</small>
                     </div>
                   </div>
@@ -65,9 +66,9 @@ export default function HeroSection() {
                   <div className="feature-row">
                     <Cpu />
                     <div>
-                      <div className="fw-semibold">Agente juridico especializado</div>
+                      <div className="fw-semibold">Agente jurídico especializado</div>
                       <small className="text-secondary">
-                        Classifica acao, tese e argumentos
+                        Classifica ação, tese e argumentos
                       </small>
                     </div>
                   </div>
@@ -75,9 +76,9 @@ export default function HeroSection() {
                   <div className="feature-row">
                     <ShieldLock />
                     <div>
-                      <div className="fw-semibold">Camada de seguranca</div>
+                      <div className="fw-semibold">Camada de segurança</div>
                       <small className="text-secondary">
-                        Regras para evitar saida inconsistente
+                        Regras para evitar saída inconsistente
                       </small>
                     </div>
                   </div>
@@ -85,8 +86,8 @@ export default function HeroSection() {
                   <div className="feature-row">
                     <FileEarmarkCheck />
                     <div>
-                      <div className="fw-semibold">Entrega pronta para revisao</div>
-                      <small className="text-secondary">DOCX e PDF com historico</small>
+                      <div className="fw-semibold">Entrega pronta para revisão</div>
+                      <small className="text-secondary">DOCX e PDF com histórico</small>
                     </div>
                   </div>
                 </div>

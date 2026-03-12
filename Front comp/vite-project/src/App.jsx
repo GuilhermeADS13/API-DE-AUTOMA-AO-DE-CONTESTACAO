@@ -5,7 +5,6 @@ import AppNavbar from "./components/AppNavbar";
 import HeroSection from "./components/HeroSection";
 import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
-import WorkflowN8nSection from "./components/WorkflowN8nSection";
 import DashboardSection from "./components/DashboardSection";
 import AppFooter from "./components/AppFooter";
 import { historyItems } from "./data/mockData";
@@ -372,8 +371,6 @@ export default function App() {
         onRemoveFile={handleRemoveFile}
         onSaveDraft={handleSaveDraft}
       />
-
-      <WorkflowN8nSection />
 
       <DashboardSection
         automationStatus={automationStatus}

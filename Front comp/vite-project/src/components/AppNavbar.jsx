@@ -17,9 +17,9 @@ export default function AppNavbar() {
 
         <Navbar.Collapse id="main-navbar">
           <Nav className="ms-auto align-items-lg-center gap-lg-3">
-            <Nav.Link href="#inicio">Inicio</Nav.Link>
-            <Nav.Link href="#fluxo">Como funciona</Nav.Link>
-            <Nav.Link href="#prova-social">Depoimentos</Nav.Link>
+            <Nav.Link href="#inicio">Início</Nav.Link>
+            <Nav.Link href="#painel">Painel</Nav.Link>
+            <Nav.Link href="#dashboard">Dashboard</Nav.Link>
             <Nav.Link href="#faq">FAQ</Nav.Link>
 
             <Button variant="dark" size="sm" className="nav-cta ms-lg-2">
