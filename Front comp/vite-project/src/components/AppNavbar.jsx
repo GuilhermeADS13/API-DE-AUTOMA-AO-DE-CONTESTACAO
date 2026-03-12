@@ -9,7 +9,7 @@ export default function AppNavbar() {
           <span className="brand-mark">JF</span>
           <span>
             <span className="brand-name d-block">JurisFlow AI</span>
-            <span className="brand-sub d-block">Automacao juridica inteligente</span>
+            <span className="brand-sub d-block">Automação Jurídica para Defesas</span>
           </span>
         </Navbar.Brand>
 
@@ -19,11 +19,11 @@ export default function AppNavbar() {
           <Nav className="ms-auto align-items-lg-center gap-lg-3">
             <Nav.Link href="#inicio">Inicio</Nav.Link>
             <Nav.Link href="#fluxo">Como funciona</Nav.Link>
-            <Nav.Link href="#prova-social">Resultados</Nav.Link>
+            <Nav.Link href="#prova-social">Depoimentos</Nav.Link>
             <Nav.Link href="#faq">FAQ</Nav.Link>
 
             <Button variant="dark" size="sm" className="nav-cta ms-lg-2">
-              Teste gratuito
+              Iniciar teste
             </Button>
           </Nav>
         </Navbar.Collapse>

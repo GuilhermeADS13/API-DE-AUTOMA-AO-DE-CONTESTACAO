@@ -26,21 +26,21 @@ export const stats = [
 export const historyItems = [
   {
     id: "CTR-2026-001",
-    cliente: "Acao de cobranca",
+    naturezaCaso: "Acao de cobranca",
     status: "Concluida",
     data: "10/03/2026",
     tipo: "Contestacao editada",
   },
   {
     id: "CTR-2026-002",
-    cliente: "Relacao de consumo",
+    naturezaCaso: "Relacao de consumo",
     status: "Em analise",
     data: "10/03/2026",
     tipo: "Revisao de fundamentacao",
   },
   {
     id: "CTR-2026-003",
-    cliente: "Responsabilidade civil",
+    naturezaCaso: "Responsabilidade civil",
     status: "Aguardando revisao",
     data: "09/03/2026",
     tipo: "Contestacao editada",

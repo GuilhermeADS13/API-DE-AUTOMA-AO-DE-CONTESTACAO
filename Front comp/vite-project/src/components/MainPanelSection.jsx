@@ -33,7 +33,7 @@ export default function MainPanelSection({
                 <Card.Body className="p-4 p-lg-5">
                   <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
                     <div>
-                      <h2 className="h3 mb-1">Suba sua peca e rode o fluxo</h2>
+                      <h2 className="h3 mb-1">Envie sua peca e execute o fluxo</h2>
                       <p className="text-secondary mb-0">
                         Configure o caso e envie para processamento assistido.
                       </p>
@@ -185,14 +185,14 @@ export default function MainPanelSection({
       <section className="pb-5">
         <Container>
           <Card className="history-card border-0">
-            <Card.Body className="p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <h2 className="h4 mb-1">Historico de documentos</h2>
-                  <p className="text-secondary mb-0">
-                    Visao rapida dos casos recentes e status de revisao.
-                  </p>
-                </div>
+                <Card.Body className="p-4">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h2 className="h4 mb-1">Historico de documentos</h2>
+                      <p className="text-secondary mb-0">
+                        Visao rapida dos casos recentes e seus status de revisao.
+                      </p>
+                    </div>
 
                 <ClockHistory size={20} />
               </div>
@@ -202,7 +202,7 @@ export default function MainPanelSection({
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Area</th>
+                      <th>Natureza do caso</th>
                       <th>Tipo</th>
                       <th>Data</th>
                       <th>Status</th>
@@ -213,7 +213,7 @@ export default function MainPanelSection({
                     {historyItems.map((item) => (
                       <tr key={item.id}>
                         <td className="fw-semibold">{item.id}</td>
-                        <td>{item.cliente}</td>
+                        <td>{item.naturezaCaso}</td>
                         <td>{item.tipo}</td>
                         <td>{item.data}</td>
                         <td>
