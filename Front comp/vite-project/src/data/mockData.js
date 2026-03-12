@@ -1,5 +1,3 @@
-import { FileEarmarkText, Upload, Cpu, Search } from "react-bootstrap-icons";
-
 export const stats = [
   {
     label: "Tempo economizado por caso",
@@ -44,38 +42,6 @@ export const historyItems = [
     status: "Aguardando revisao",
     data: "09/03/2026",
     tipo: "Contestacao editada",
-  },
-];
-
-export const flowSteps = [
-  "Recebimento dos dados no frontend",
-  "Disparo do webhook para n8n",
-  "Classificacao da acao e da tese",
-  "Edicao assistida da fundamentacao",
-  "Validacao das regras juridicas",
-  "Exportacao para revisao final",
-];
-
-export const pipelineCards = [
-  {
-    icon: Upload,
-    title: "Entrada",
-    text: "Recebe dados do processo e a peca base com validacoes iniciais.",
-  },
-  {
-    icon: Search,
-    title: "Analise",
-    text: "Interpreta o caso e define a melhor linha juridica para resposta.",
-  },
-  {
-    icon: Cpu,
-    title: "IA",
-    text: "Complementa argumentos com linguagem formal e padrao do escritorio.",
-  },
-  {
-    icon: FileEarmarkText,
-    title: "Saida",
-    text: "Entrega documento estruturado, pronto para revisao e download.",
   },
 ];
 

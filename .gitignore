@@ -1,0 +1,17 @@
+﻿# Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+Backend/app.db
+
+# Frontend
+Front comp/vite-project/node_modules/
+Front comp/vite-project/dist/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
