@@ -10,7 +10,6 @@ import DashboardSection from "./components/DashboardSection";
 import AppFooter from "./components/AppFooter";
 
 export default function App() {
-
   const [showModal, setShowModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,8 +46,7 @@ export default function App() {
   };
 
   return (
-    <div className="bg-light min-vh-100">
-
+    <div className="app-shell min-vh-100">
       <AppNavbar />
 
       <HeroSection />
@@ -71,13 +69,13 @@ export default function App() {
       <AppFooter />
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-
         <Modal.Header closeButton>
-          <Modal.Title>Envio concluído</Modal.Title>
+          <Modal.Title>Envio concluido</Modal.Title>
         </Modal.Header>
 
         <Modal.Body>
-          O caso foi encaminhado para o fluxo no n8n e está pronto para análise do agente de IA.
+          Seu caso foi enviado para o fluxo no n8n e ja esta pronto para analise
+          do agente juridico.
         </Modal.Body>
 
         <Modal.Footer>
@@ -85,13 +83,11 @@ export default function App() {
             Fechar
           </Button>
 
-          <Button variant="primary" onClick={() => setShowModal(false)}>
-            Ver histórico
+          <Button variant="dark" onClick={() => setShowModal(false)}>
+            Ver fila
           </Button>
         </Modal.Footer>
-
       </Modal>
-
     </div>
   );
 }

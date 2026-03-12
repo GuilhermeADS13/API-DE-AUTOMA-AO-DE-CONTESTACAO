@@ -1,15 +1,22 @@
-/*
-=========================================================
-SETOR 1 — BADGE DE STATUS
-Esse componente mostra o status com cor.
-=========================================================
-*/
-
-import React from 'react'
-import { Badge } from 'react-bootstrap'
+import React from "react";
+import { Badge } from "react-bootstrap";
 
 export default function StatusBadge({ status }) {
-  const variant = status === 'Concluída' ? 'success' : 'warning'
+  const normalized = status.toLowerCase();
 
-  return <Badge bg={variant}>{status}</Badge>
+  let variant = "secondary";
+
+  if (normalized.includes("conclu")) {
+    variant = "success";
+  } else if (normalized.includes("analise")) {
+    variant = "warning";
+  } else if (normalized.includes("revis")) {
+    variant = "primary";
+  }
+
+  return (
+    <Badge pill bg={variant} className="status-pill">
+      {status}
+    </Badge>
+  );
 }

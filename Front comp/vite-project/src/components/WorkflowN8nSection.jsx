@@ -4,33 +4,33 @@ import { pipelineCards } from "../data/mockData";
 
 export default function WorkflowN8nSection() {
   return (
-    <section id="fluxo" className="py-5 bg-white border-top border-bottom">
+    <section id="fluxo" className="workflow-section py-5">
       <Container>
-        <div className="text-center mb-5">
-          <Badge bg="dark" className="mb-2">
-            Fluxo automatizado
-          </Badge>
+        <div className="section-heading text-center mb-5">
+          <Badge className="section-badge mb-2">Orquestracao com n8n</Badge>
 
-          <h2 className="fw-bold">Visão do pipeline com n8n</h2>
+          <h2 className="fw-bold mb-2">Do envio da peca ate o documento final</h2>
 
           <p className="text-secondary mb-0">
-            O n8n orquestra as etapas do sistema e integra o agente de IA ao backend e ao armazenamento.
+            Um pipeline unico conecta dados do processo, IA juridica e revisao
+            humana sem perder rastreabilidade.
           </p>
         </div>
 
         <Row className="g-4">
-          {pipelineCards.map((item) => {
+          {pipelineCards.map((item, index) => {
             const Icon = item.icon;
 
             return (
               <Col md={6} lg={3} key={item.title}>
-                <Card className="border-0 shadow-sm rounded-4 h-100 text-center">
+                <Card className="workflow-card border-0 h-100">
                   <Card.Body className="p-4">
-                    <div className="mb-3">
-                      <Icon size={32} />
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <span className="workflow-index">0{index + 1}</span>
+                      <Icon size={24} />
                     </div>
 
-                    <h3 className="h5">{item.title}</h3>
+                    <h3 className="h5 mb-2">{item.title}</h3>
                     <p className="text-secondary mb-0">{item.text}</p>
                   </Card.Body>
                 </Card>

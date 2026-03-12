@@ -1,22 +1,21 @@
-/*
-=========================================================
-SETOR 1 — RODAPÉ
-=========================================================
-*/
-
-import React from 'react'
-import { Container } from 'react-bootstrap'
+import React from "react";
+import { Container } from "react-bootstrap";
 
 export default function AppFooter() {
   return (
-    <footer className="py-4 bg-dark text-white-50">
-      <Container className="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-2">
+    <footer className="app-footer py-4">
+      <Container className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
         <div>
-          <strong className="text-white">JurisFlow AI</strong> · Frontend React + Bootstrap
+          <strong>JurisFlow AI</strong>
+          <div className="small text-secondary">
+            Automacao de contestacoes com IA e n8n
+          </div>
         </div>
 
-        <div>Automação de contestação com agente de IA e n8n</div>
+        <div className="small text-secondary">
+          Frontend em React + Bootstrap | Fluxo pronto para escalar
+        </div>
       </Container>
     </footer>
-  )
+  );
 }

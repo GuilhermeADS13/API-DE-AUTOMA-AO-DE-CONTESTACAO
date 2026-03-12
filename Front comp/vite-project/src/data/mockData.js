@@ -1,132 +1,94 @@
-/*
-=========================================================
-SETOR 1 — IMPORTAÇÃO DOS ÍCONES
-Esses ícones são usados no pipeline do sistema.
-=========================================================
-*/
-
-import {
-  FileEarmarkText,
-  Upload,
-  Cpu,
-  Search,
-} from "react-bootstrap-icons"
-
-/*
-=========================================================
-SETOR 2 — MÉTRICAS DO SISTEMA
-Esses dados alimentam os cards da seção StatsSection.
-=========================================================
-*/
+import { FileEarmarkText, Upload, Cpu, Search } from "react-bootstrap-icons";
 
 export const stats = [
-  { label: "Peças editadas hoje", value: "128+" },
-  { label: "Escritórios ativos", value: "32" },
-  { label: "Teses disponíveis", value: "96" },
-  { label: "Tempo médio poupado", value: "73%" },
-]
-
-/*
-=========================================================
-SETOR 3 — HISTÓRICO DE DOCUMENTOS
-Esses dados aparecem na tabela do painel principal.
-=========================================================
-*/
+  {
+    label: "Tempo economizado por caso",
+    value: "-78%",
+    detail: "Media em operacoes repetitivas",
+  },
+  {
+    label: "Produtividade da equipe",
+    value: "+3.4x",
+    detail: "Mais pecas finalizadas por dia",
+  },
+  {
+    label: "Conformidade juridica",
+    value: "96%",
+    detail: "Saidas dentro do padrao definido",
+  },
+  {
+    label: "Escritorios ativos",
+    value: "32",
+    detail: "Uso recorrente do fluxo automatizado",
+  },
+];
 
 export const historyItems = [
   {
     id: "CTR-2026-001",
-    cliente: "Ação de cobrança",
-    status: "Concluída",
+    cliente: "Acao de cobranca",
+    status: "Concluida",
     data: "10/03/2026",
-    tipo: "Contestação editada",
+    tipo: "Contestacao editada",
   },
   {
     id: "CTR-2026-002",
-    cliente: "Relação de consumo",
-    status: "Em análise",
+    cliente: "Relacao de consumo",
+    status: "Em analise",
     data: "10/03/2026",
-    tipo: "Revisão de fundamentação",
+    tipo: "Revisao de fundamentacao",
   },
   {
     id: "CTR-2026-003",
     cliente: "Responsabilidade civil",
-    status: "Concluída",
+    status: "Aguardando revisao",
     data: "09/03/2026",
-    tipo: "Contestação editada",
+    tipo: "Contestacao editada",
   },
-]
-
-/*
-=========================================================
-SETOR 4 — ETAPAS DO FLUXO DO SISTEMA
-Usado no painel para explicar o fluxo da automação.
-=========================================================
-*/
+];
 
 export const flowSteps = [
-  "Recebimento no frontend",
-  "Orquestração via n8n",
-  "Classificação da ação",
-  "Seleção de tese jurídica",
-  "Edição da fundamentação",
-  "Exportação final",
-]
-
-/*
-=========================================================
-SETOR 5 — CARDS DO PIPELINE N8N
-Usados na seção WorkflowN8nSection.
-=========================================================
-*/
+  "Recebimento dos dados no frontend",
+  "Disparo do webhook para n8n",
+  "Classificacao da acao e da tese",
+  "Edicao assistida da fundamentacao",
+  "Validacao das regras juridicas",
+  "Exportacao para revisao final",
+];
 
 export const pipelineCards = [
   {
     icon: Upload,
     title: "Entrada",
-    text: "Recebe os dados do processo e a peça base enviada pelo usuário.",
+    text: "Recebe dados do processo e a peca base com validacoes iniciais.",
   },
   {
     icon: Search,
-    title: "Análise",
-    text: "Classifica o caso e identifica a melhor linha de atuação jurídica.",
+    title: "Analise",
+    text: "Interpreta o caso e define a melhor linha juridica para resposta.",
   },
   {
     icon: Cpu,
     title: "IA",
-    text: "Edita e complementa a fundamentação dentro das regras definidas.",
+    text: "Complementa argumentos com linguagem formal e padrao do escritorio.",
   },
   {
     icon: FileEarmarkText,
-    title: "Saída",
-    text: "Entrega o documento final para revisão, download e histórico.",
+    title: "Saida",
+    text: "Entrega documento estruturado, pronto para revisao e download.",
   },
-]
-
-/*
-=========================================================
-SETOR 6 — REGRAS DO AGENTE JURÍDICO
-Essas regras aparecem no painel principal do sistema.
-=========================================================
-*/
+];
 
 export const agentRules = [
-  "Não alterar dados do processo.",
-  "Não inventar jurisprudência.",
-  "Manter linguagem jurídica formal.",
-  "Atuar sobre a peça base, sem reescrever tudo.",
-]
-
-/*
-=========================================================
-SETOR 7 — INDICADORES DO DASHBOARD
-Usados na seção DashboardSection.
-=========================================================
-*/
+  "Nao alterar dados processuais sensiveis.",
+  "Nao inventar jurisprudencia nem citacoes.",
+  "Manter linguagem juridica formal e objetiva.",
+  "Atuar apenas na edicao da peca base.",
+];
 
 export const dashboardCards = [
   { label: "Casos em fila", value: "07" },
-  { label: "Em revisão humana", value: "14" },
+  { label: "Em revisao humana", value: "14" },
   { label: "Prontas para download", value: "22" },
   { label: "Taxa de conformidade", value: "96%" },
-]
+];

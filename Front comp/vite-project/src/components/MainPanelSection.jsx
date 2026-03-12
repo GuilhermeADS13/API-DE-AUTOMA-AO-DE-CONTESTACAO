@@ -1,11 +1,4 @@
-/*
-=========================================================
-SETOR 1 — PAINEL PRINCIPAL
-Formulário, regras do agente e histórico.
-=========================================================
-*/
-
-import React from 'react'
+import React from "react";
 import {
   Alert,
   Badge,
@@ -17,10 +10,10 @@ import {
   ProgressBar,
   Row,
   Table,
-} from 'react-bootstrap'
-import { CheckCircle, ClockHistory, Upload } from 'react-bootstrap-icons'
-import { agentRules, flowSteps, historyItems } from '../data/mockData'
-import StatusBadge from './ui/StatusBadge'
+} from "react-bootstrap";
+import { CheckCircle, ClockHistory, Upload } from "react-bootstrap-icons";
+import { agentRules, flowSteps, historyItems } from "../data/mockData";
+import StatusBadge from "./ui/StatusBadge";
 
 export default function MainPanelSection({
   form,
@@ -36,18 +29,18 @@ export default function MainPanelSection({
         <Container>
           <Row className="g-4">
             <Col lg={7}>
-              <Card className="border-0 shadow-sm rounded-4 h-100">
+              <Card className="panel-card border-0 h-100">
                 <Card.Body className="p-4 p-lg-5">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
                     <div>
-                      <h2 className="h3 mb-1">Painel de edição da contestação</h2>
+                      <h2 className="h3 mb-1">Suba sua peca e rode o fluxo</h2>
                       <p className="text-secondary mb-0">
-                        Envie os dados essenciais para o fluxo automatizado no n8n.
+                        Configure o caso e envie para processamento assistido.
                       </p>
                     </div>
 
-                    <Badge bg="info">
-                      Etapa {completion > 0 ? 'em andamento' : 'inicial'}
+                    <Badge className="panel-badge">
+                      {completion > 0 ? "Fluxo em andamento" : "Pronto para iniciar"}
                     </Badge>
                   </div>
 
@@ -56,13 +49,12 @@ export default function MainPanelSection({
                       <span>Preenchimento do caso</span>
                       <span>{completion}%</span>
                     </div>
-
                     <ProgressBar now={completion} />
                   </div>
 
                   {submitted && (
                     <Alert variant="success" className="d-flex align-items-center gap-2">
-                      <CheckCircle /> Caso enviado com sucesso para análise do agente.
+                      <CheckCircle /> Caso enviado com sucesso para o agente juridico.
                     </Alert>
                   )}
 
@@ -70,7 +62,7 @@ export default function MainPanelSection({
                     <Row className="g-3">
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Número do processo</Form.Label>
+                          <Form.Label>Numero do processo</Form.Label>
                           <Form.Control
                             name="processo"
                             value={form.processo}
@@ -82,7 +74,7 @@ export default function MainPanelSection({
 
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Cliente / Parte</Form.Label>
+                          <Form.Label>Cliente ou parte</Form.Label>
                           <Form.Control
                             name="cliente"
                             value={form.cliente}
@@ -94,18 +86,14 @@ export default function MainPanelSection({
 
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Tipo de ação</Form.Label>
-                          <Form.Select
-                            name="tipoAcao"
-                            value={form.tipoAcao}
-                            onChange={onChange}
-                          >
+                          <Form.Label>Tipo de acao</Form.Label>
+                          <Form.Select name="tipoAcao" value={form.tipoAcao} onChange={onChange}>
                             <option value="">Selecione</option>
-                            <option>Ação de cobrança</option>
-                            <option>Relação de consumo</option>
+                            <option>Acao de cobranca</option>
+                            <option>Relacao de consumo</option>
                             <option>Responsabilidade civil</option>
-                            <option>Execução</option>
-                            <option>Obrigações contratuais</option>
+                            <option>Execucao</option>
+                            <option>Obrigacoes contratuais</option>
                           </Form.Select>
                         </Form.Group>
                       </Col>
@@ -117,46 +105,42 @@ export default function MainPanelSection({
                             name="tese"
                             value={form.tese}
                             onChange={onChange}
-                            placeholder="Ex.: ausência de responsabilidade"
+                            placeholder="Ex.: ausencia de responsabilidade"
                           />
                         </Form.Group>
                       </Col>
 
                       <Col xs={12}>
                         <Form.Group>
-                          <Form.Label>Observações para o agente</Form.Label>
+                          <Form.Label>Observacoes para o agente</Form.Label>
                           <Form.Control
                             as="textarea"
-                            rows={5}
+                            rows={4}
                             name="observacoes"
                             value={form.observacoes}
                             onChange={onChange}
-                            placeholder="Informe contexto do caso, limites de edição e observações relevantes."
+                            placeholder="Contexto do caso, limites da edicao e pontos de atencao."
                           />
                         </Form.Group>
                       </Col>
 
                       <Col xs={12}>
-                        <Card className="bg-light border-0 rounded-4">
-                          <Card.Body>
-                            <div className="fw-semibold mb-2">Upload da peça base</div>
-
-                            <div className="upload-box">
-                              <Upload size={28} className="mb-2 text-secondary" />
-                              <div className="fw-medium">Arraste o arquivo ou clique para anexar</div>
-                              <div className="small text-secondary">Formatos aceitos: DOCX, PDF</div>
-                            </div>
-                          </Card.Body>
-                        </Card>
+                        <div className="upload-box">
+                          <Upload size={28} className="mb-2" />
+                          <div className="fw-semibold">Upload da peca base</div>
+                          <small className="text-secondary">
+                            Arraste ou clique para anexar DOCX/PDF.
+                          </small>
+                        </div>
                       </Col>
                     </Row>
 
                     <div className="d-flex flex-wrap gap-2 mt-4">
-                      <Button type="submit" variant="primary" disabled={loading}>
-                        {loading ? 'Processando...' : 'Enviar para o agente'}
+                      <Button type="submit" variant="dark" disabled={loading}>
+                        {loading ? "Processando..." : "Enviar para automacao"}
                       </Button>
 
-                      <Button type="button" variant="outline-secondary">
+                      <Button type="button" variant="outline-dark">
                         Salvar rascunho
                       </Button>
                     </div>
@@ -166,11 +150,10 @@ export default function MainPanelSection({
             </Col>
 
             <Col lg={5}>
-              <div className="d-grid gap-4">
-                <Card className="border-0 shadow-sm rounded-4">
+              <div className="d-grid gap-4 h-100">
+                <Card className="side-info-card border-0">
                   <Card.Body className="p-4">
-                    <h3 className="h5 mb-3">Regras do agente</h3>
-
+                    <h3 className="h5 mb-3">Regras da IA juridica</h3>
                     <ul className="mb-0 text-secondary">
                       {agentRules.map((rule) => (
                         <li key={rule}>{rule}</li>
@@ -179,20 +162,15 @@ export default function MainPanelSection({
                   </Card.Body>
                 </Card>
 
-                <Card className="border-0 shadow-sm rounded-4">
+                <Card className="side-info-card border-0">
                   <Card.Body className="p-4">
-                    <h3 className="h5 mb-3">Etapas do fluxo</h3>
+                    <h3 className="h5 mb-3">Fluxo de execucao</h3>
 
                     <div className="d-grid gap-3">
                       {flowSteps.map((step, index) => (
-                        <div className="d-flex align-items-center gap-3" key={step}>
-                          <div
-                            className="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
-                            style={{ width: 32, height: 32, minWidth: 32 }}
-                          >
-                            {index + 1}
-                          </div>
-                          <div>{step}</div>
+                        <div className="flow-row" key={step}>
+                          <span className="step-index">{index + 1}</span>
+                          <span>{step}</span>
                         </div>
                       ))}
                     </div>
@@ -204,19 +182,19 @@ export default function MainPanelSection({
         </Container>
       </section>
 
-      <section className="py-5">
+      <section className="pb-5">
         <Container>
-          <Card className="border-0 shadow-sm rounded-4">
+          <Card className="history-card border-0">
             <Card.Body className="p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h2 className="h4 mb-1">Histórico de documentos</h2>
+                  <h2 className="h4 mb-1">Historico de documentos</h2>
                   <p className="text-secondary mb-0">
-                    Acompanhe peças editadas e revisões em andamento.
+                    Visao rapida dos casos recentes e status de revisao.
                   </p>
                 </div>
 
-                <ClockHistory size={22} />
+                <ClockHistory size={20} />
               </div>
 
               <div className="table-responsive">
@@ -224,7 +202,7 @@ export default function MainPanelSection({
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Área</th>
+                      <th>Area</th>
                       <th>Tipo</th>
                       <th>Data</th>
                       <th>Status</th>
@@ -251,5 +229,5 @@ export default function MainPanelSection({
         </Container>
       </section>
     </>
-  )
+  );
 }
