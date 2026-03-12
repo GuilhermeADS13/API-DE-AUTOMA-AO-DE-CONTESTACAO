@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI()
 
 app.add_middleware(
@@ -12,4 +13,4 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Backend funcionando!"}
+    return {"mensage': "API de Contestação  "}      
