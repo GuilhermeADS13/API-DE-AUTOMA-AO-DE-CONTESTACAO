@@ -9,7 +9,7 @@ export default function DashboardSection({ history, automationStatus }) {
       <Container>
         <div className="dashboard-simple-header mb-4">
           <Badge className="section-badge mb-2">Dashboard</Badge>
-          <h2 className="fw-bold mb-1">Dashboard simples e facil de entender</h2>
+          <h2 className="fw-bold mb-1">Dashboard informativo para os advocados </h2>
           <p className="text-secondary mb-0">
             Veja o status da automacao e o historico das defesas em uma unica tela.
           </p>
