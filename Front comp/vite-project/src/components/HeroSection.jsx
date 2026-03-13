@@ -1,99 +1,157 @@
 import React from "react";
 import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import {
+  Activity,
   ArrowRight,
-  ClockHistory,
   Cpu,
+  Diagram3,
+  FileEarmarkRuled,
   FileEarmarkCheck,
-  ShieldLock,
+  ShieldCheck,
 } from "react-bootstrap-icons";
 
-export default function HeroSection() {
+export default function HeroSection({ onNavigate }) {
   return (
     <section id="inicio" className="hero-section py-5">
       <Container>
         <Row className="align-items-center g-4 g-lg-5">
           <Col lg={7} className="hero-copy">
-            <Badge className="hero-kicker mb-3">Plataforma de IA para advocacia</Badge>
+            <Badge className="hero-kicker mb-3">Automacao juridica de defesas</Badge>
 
             <h1 className="hero-title mb-3">
-              Um dia de trabalho jurídico, resolvido em menos de um minuto.
+              Organize o envio para o agente de IA e acompanhe a edicao da defesa em tempo real.
             </h1>
 
             <p className="hero-lead mb-4">
-              O agente jurídico analisa o caso, identifica a tese principal,
-              aprimora a fundamentação e entrega a minuta pronta para revisão
-              humana com padrão técnico do seu escritório.
+              A plataforma foi simplificada para fluxo direto: preencher dados,
+              anexar a peca base, editar ao vivo e enviar para automacao com seguranca.
             </p>
 
             <div className="d-flex flex-wrap gap-2 mb-4">
-              <Button variant="dark" size="lg" href="#painel">
-                Quero testar agora
+              <Button
+                variant="dark"
+                size="lg"
+                className="hero-primary-btn"
+                onClick={() => onNavigate("painel")}
+              >
+                Abrir formulario IA
               </Button>
 
-              <Button variant="outline-dark" size="lg" href="#dashboard">
-                Ver painel
+              <Button
+                variant="outline-dark"
+                size="lg"
+                className="hero-secondary-btn"
+                onClick={() => onNavigate("dashboard")}
+              >
+                Ver dashboard
               </Button>
             </div>
 
-            <div className="d-flex flex-wrap gap-2">
-              <span className="trust-pill">IA treinada no direito brasileiro</span>
-              <span className="trust-pill">Processo padronizado por escritório</span>
-              <span className="trust-pill">Revisão final sempre humana</span>
+            <div className="d-flex flex-wrap gap-2 mb-4">
+              <span className="trust-pill">Formulario unico e objetivo</span>
+              <span className="trust-pill">Edicao ao vivo da defesa</span>
+              <span className="trust-pill">Historico claro no dashboard</span>
+            </div>
+
+            <div className="hero-proof-grid">
+              <div className="proof-card">
+                <div className="proof-title">Fluxo direto para IA</div>
+                <p className="mb-0">
+                  Dados essenciais, upload da peca base e envio para automacao no mesmo ambiente.
+                </p>
+              </div>
+
+              <div className="proof-card">
+                <div className="proof-title">Dashboard simples</div>
+                <p className="mb-0">
+                  Indicadores claros e leitura facil para acompanhar cada defesa processada.
+                </p>
+              </div>
             </div>
           </Col>
 
           <Col lg={5}>
             <Card className="hero-console border-0">
               <Card.Body className="p-4 p-lg-4">
-                <div className="d-flex justify-content-between align-items-start mb-3">
+                <div className="console-topbar mb-4">
                   <div>
-                    <small className="text-secondary d-block">Painel ao vivo</small>
-                    <h2 className="h5 mb-0">Fluxo inteligente de contestacao</h2>
+                    <small className="console-eyebrow d-block">Workspace juridico em tempo real</small>
+                    <h2 className="h5 mb-1">Painel de automacao de defesas</h2>
+                    <p className="text-secondary small mb-0">
+                      Etapas do processamento da defesa com visao objetiva.
+                    </p>
                   </div>
-                  <span className="live-chip">ativo</span>
+                  <div className="console-score">
+                    <strong>96%</strong>
+                    <span>aderencia</span>
+                  </div>
                 </div>
 
-                <div className="d-grid gap-2">
+                <div className="d-grid gap-3">
                   <div className="feature-row">
-                    <ClockHistory />
-                    <div>
-                      <div className="fw-semibold">Tempo médio por caso</div>
-                      <small className="text-secondary">De horas para minutos</small>
+                    <div className="feature-icon">
+                      <Diagram3 />
                     </div>
+                    <div>
+                      <div className="fw-semibold">Entrada estruturada do caso</div>
+                      <small className="text-secondary">Formulario guiado por processo, parte e tese</small>
+                    </div>
+                    <span className="feature-state">Step 01</span>
                   </div>
 
                   <div className="feature-row">
-                    <Cpu />
+                    <div className="feature-icon">
+                      <Cpu />
+                    </div>
                     <div>
-                      <div className="fw-semibold">Agente jurídico especializado</div>
+                      <div className="fw-semibold">Agente juridico de apoio</div>
                       <small className="text-secondary">
-                        Classifica ação, tese e argumentos
+                        Ajusta estrutura e linguagem da defesa com base no seu envio
                       </small>
                     </div>
+                    <span className="feature-state">Step 02</span>
                   </div>
 
                   <div className="feature-row">
-                    <ShieldLock />
+                    <div className="feature-icon">
+                      <ShieldCheck />
+                    </div>
                     <div>
-                      <div className="fw-semibold">Camada de segurança</div>
+                      <div className="fw-semibold">Governanca e seguranca juridica</div>
                       <small className="text-secondary">
-                        Regras para evitar saída inconsistente
+                        Regras para reduzir inconsistencias e manter controle da equipe
                       </small>
                     </div>
+                    <span className="feature-state">Step 03</span>
                   </div>
 
                   <div className="feature-row">
-                    <FileEarmarkCheck />
-                    <div>
-                      <div className="fw-semibold">Entrega pronta para revisão</div>
-                      <small className="text-secondary">DOCX e PDF com histórico</small>
+                    <div className="feature-icon">
+                      <FileEarmarkCheck />
                     </div>
+                    <div>
+                      <div className="fw-semibold">Edicao ao vivo e exportacao</div>
+                      <small className="text-secondary">Visualize e ajuste antes de baixar DOC/PDF</small>
+                    </div>
+                    <span className="feature-state">Step 04</span>
+                  </div>
+                </div>
+
+                <div className="console-mini-grid mt-4">
+                  <div className="console-mini-card">
+                    <Activity className="console-mini-icon" />
+                    <div className="console-mini-value">14</div>
+                    <div className="console-mini-label">fluxos ativos</div>
+                  </div>
+                  <div className="console-mini-card">
+                    <FileEarmarkRuled className="console-mini-icon" />
+                    <div className="console-mini-value">22</div>
+                    <div className="console-mini-label">pecas prontas</div>
                   </div>
                 </div>
 
                 <div className="console-footer mt-3 pt-3">
-                  <span>Webhook conectado e monitorado</span>
+                  <span>Formulario, IA e dashboard conectados no mesmo fluxo</span>
                   <ArrowRight />
                 </div>
               </Card.Body>

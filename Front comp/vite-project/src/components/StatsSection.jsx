@@ -6,6 +6,15 @@ export default function StatsSection() {
   return (
     <section className="stats-band pb-4">
       <Container>
+        <div className="stats-intro">
+          <div className="section-kicker">Indicadores da plataforma</div>
+          <h2 className="stats-title">Metricas da operacao de automacao de defesas</h2>
+          <p className="stats-copy mb-0">
+            Visao direta de tempo, capacidade e qualidade para acompanhar o desempenho
+            do fluxo juridico com clareza.
+          </p>
+        </div>
+
         <Row className="g-3">
           {stats.map((item) => (
             <Col md={6} lg={3} key={item.label}>

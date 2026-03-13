@@ -1,7 +1,6 @@
 import React, { useRef, useState } from "react";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   Col,
@@ -9,11 +8,9 @@ import {
   Form,
   ProgressBar,
   Row,
-  Table,
 } from "react-bootstrap";
-import { CheckCircle, ClockHistory, Paperclip, Upload, XCircle } from "react-bootstrap-icons";
-import { agentRules } from "../data/mockData";
-import StatusBadge from "./ui/StatusBadge";
+import { CheckCircle, Paperclip, Upload, XCircle } from "react-bootstrap-icons";
+import { agentRules, legalBranches } from "../data/mockData";
 
 function fileSizeLabel(file) {
   if (!file) return "";
@@ -27,17 +24,20 @@ export default function MainPanelSection({
   completion,
   submitted,
   loading,
-  history,
   formErrors,
   uploadError,
   uploadedFile,
   draftInfo,
   feedback,
+  liveDraft,
+  liveDraftTouched,
   onChange,
   onSubmit,
   onFileSelect,
   onRemoveFile,
   onSaveDraft,
+  onLiveDraftChange,
+  onResetLiveDraft,
 }) {
   const fileInputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -63,285 +63,258 @@ export default function MainPanelSection({
   const uploadValidation = uploadError || formErrors.upload;
 
   return (
-    <>
-      <section id="painel" className="py-5">
-        <Container>
-          <Row className="g-4">
-            <Col lg={7}>
-              <Card className="panel-card border-0 h-100">
-                <Card.Body className="p-4 p-lg-5">
-                  <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
-                    <div>
-                      <h2 className="h3 mb-1">Envie sua peça e execute o fluxo</h2>
-                      <p className="text-secondary mb-0">
-                        Configure o caso e envie para processamento assistido.
-                      </p>
-                    </div>
-
-                    <Badge className="panel-badge">
-                      {completion > 0 ? "Fluxo em andamento" : "Pronto para iniciar"}
-                    </Badge>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="d-flex justify-content-between small text-secondary mb-2">
-                      <span>Preenchimento do caso</span>
-                      <span>{completion}%</span>
-                    </div>
-                    <ProgressBar now={completion} />
-                  </div>
-
-                  {feedback && <Alert variant={feedback.variant}>{feedback.text}</Alert>}
-
-                  {submitted && (
-                    <Alert variant="success" className="d-flex align-items-center gap-2">
-                      <CheckCircle /> Caso enviado com sucesso para o agente jurídico.
-                    </Alert>
-                  )}
-
-                  <Form onSubmit={onSubmit}>
-                    <Row className="g-3">
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label>Número do processo</Form.Label>
-                          <Form.Control
-                            name="processo"
-                            value={form.processo}
-                            onChange={onChange}
-                            placeholder="0001234-56.2026.8.00.0000"
-                            isInvalid={Boolean(formErrors.processo)}
-                          />
-                          <Form.Control.Feedback type="invalid">
-                            {formErrors.processo}
-                          </Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label>Cliente ou parte</Form.Label>
-                          <Form.Control
-                            name="cliente"
-                            value={form.cliente}
-                            onChange={onChange}
-                            placeholder="Nome da parte"
-                            isInvalid={Boolean(formErrors.cliente)}
-                          />
-                          <Form.Control.Feedback type="invalid">
-                            {formErrors.cliente}
-                          </Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label>Tipo de ação</Form.Label>
-                          <Form.Select
-                            name="tipoAcao"
-                            value={form.tipoAcao}
-                            onChange={onChange}
-                            isInvalid={Boolean(formErrors.tipoAcao)}
-                          >
-                            <option value="">Selecione</option>
-                            <option>Acao de cobranca</option>
-                            <option>Relacao de consumo</option>
-                            <option>Responsabilidade civil</option>
-                            <option>Execucao</option>
-                            <option>Obrigacoes contratuais</option>
-                          </Form.Select>
-                          <Form.Control.Feedback type="invalid">
-                            {formErrors.tipoAcao}
-                          </Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label>Tese principal</Form.Label>
-                          <Form.Control
-                            name="tese"
-                            value={form.tese}
-                            onChange={onChange}
-                            placeholder="Ex.: ausencia de responsabilidade"
-                            isInvalid={Boolean(formErrors.tese)}
-                          />
-                          <Form.Control.Feedback type="invalid">
-                            {formErrors.tese}
-                          </Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-
-                      <Col xs={12}>
-                        <Form.Group>
-                          <Form.Label>Observações para o agente</Form.Label>
-                          <Form.Control
-                            as="textarea"
-                            rows={4}
-                            name="observacoes"
-                            value={form.observacoes}
-                            onChange={onChange}
-                            placeholder="Contexto do caso, limites da edicao e pontos de atencao."
-                            isInvalid={Boolean(formErrors.observacoes)}
-                          />
-                          <Form.Control.Feedback type="invalid">
-                            {formErrors.observacoes}
-                          </Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-
-                      <Col xs={12}>
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          className={`upload-box ${dragging ? "is-dragging" : ""} ${
-                            uploadedFile ? "has-file" : ""
-                          }`}
-                          onClick={openPicker}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") openPicker();
-                          }}
-                          onDragOver={(event) => {
-                            event.preventDefault();
-                            setDragging(true);
-                          }}
-                          onDragLeave={(event) => {
-                            event.preventDefault();
-                            setDragging(false);
-                          }}
-                          onDrop={handleDrop}
-                        >
-                          <Upload size={28} className="mb-2" />
-                          <div className="fw-semibold">Upload da peca base</div>
-                          <small className="text-secondary">
-                            Arraste ou clique para anexar DOCX, DOC ou PDF.
-                          </small>
-                        </div>
-
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".doc,.docx,.pdf"
-                          className="d-none"
-                          onChange={handleFileInput}
-                        />
-
-                        {uploadedFile && (
-                          <div className="upload-file-summary mt-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <Paperclip />
-                              <div>
-                                <div className="fw-semibold">{uploadedFile.name}</div>
-                                <small className="text-secondary">
-                                  {fileSizeLabel(uploadedFile)}
-                                </small>
-                              </div>
-                            </div>
-
-                            <Button
-                              variant="link"
-                              className="upload-remove p-0"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                onRemoveFile();
-                              }}
-                            >
-                              <XCircle /> Remover
-                            </Button>
-                          </div>
-                        )}
-
-                        {uploadValidation && (
-                          <div className="upload-feedback-error">{uploadValidation}</div>
-                        )}
-                      </Col>
-                    </Row>
-
-                    <div className="d-flex flex-wrap gap-2 mt-4">
-                      <Button type="submit" variant="dark" disabled={loading}>
-                        {loading ? "Processando..." : "Enviar para automacao"}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline-dark"
-                        disabled={loading}
-                        onClick={onSaveDraft}
-                      >
-                        Salvar rascunho
-                      </Button>
-                    </div>
-
-                    {draftInfo && <div className="draft-info mt-3">{draftInfo}</div>}
-                  </Form>
-                </Card.Body>
-              </Card>
-            </Col>
-
-            <Col lg={5}>
-              <div className="d-grid gap-4 h-100">
-                <Card className="side-info-card border-0">
-                  <Card.Body className="p-4">
-                    <h3 className="h5 mb-3">Regras da IA jurídica</h3>
-                    <ul className="mb-0 text-secondary">
-                      {agentRules.map((rule) => (
-                        <li key={rule}>{rule}</li>
-                      ))}
-                    </ul>
-                  </Card.Body>
-                </Card>
-              </div>
-            </Col>
-          </Row>
-        </Container>
-      </section>
-
-      <section className="pb-5">
-        <Container>
-          <Card className="history-card border-0">
-            <Card.Body className="p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <h2 className="h4 mb-1">Histórico de documentos</h2>
+    <section id="painel" className="py-5">
+      <Container>
+        <Row className="g-4">
+          <Col lg={7}>
+            <Card className="panel-card border-0 h-100">
+              <Card.Body className="p-4 p-lg-5">
+                <div className="mb-4">
+                  <h2 className="h3 mb-2">Formulario para envio ao agente de IA</h2>
                   <p className="text-secondary mb-0">
-                    Visão rápida dos casos recentes e seus status de revisão.
+                    Preencha os dados do caso, anexe a peca base e envie para automacao.
                   </p>
                 </div>
 
-                <ClockHistory size={20} />
-              </div>
+                <div className="mb-4">
+                  <div className="d-flex justify-content-between small text-secondary mb-2">
+                    <span>Preenchimento do caso</span>
+                    <span>{completion}%</span>
+                  </div>
+                  <ProgressBar now={completion} />
+                </div>
 
-              <div className="table-responsive">
-                <Table hover align="middle" className="mb-0">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Natureza do caso</th>
-                      <th>Tipo</th>
-                      <th>Data</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
+                {feedback && <Alert variant={feedback.variant}>{feedback.text}</Alert>}
 
-                  <tbody>
-                    {history.map((item) => (
-                      <tr key={item.id}>
-                        <td className="fw-semibold">{item.id}</td>
-                        <td>{item.naturezaCaso}</td>
-                        <td>{item.tipo}</td>
-                        <td>{item.data}</td>
-                        <td>
-                          <StatusBadge status={item.status} />
-                        </td>
-                      </tr>
+                {submitted && (
+                  <Alert variant="success" className="d-flex align-items-center gap-2">
+                    <CheckCircle /> Defesa enviada com sucesso para o agente de IA.
+                  </Alert>
+                )}
+
+                <Form onSubmit={onSubmit}>
+                  <Row className="g-3">
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Numero do processo</Form.Label>
+                        <Form.Control
+                          name="processo"
+                          value={form.processo}
+                          onChange={onChange}
+                          placeholder="0001234-56.2026.8.00.0000"
+                          isInvalid={Boolean(formErrors.processo)}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.processo}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Cliente ou parte</Form.Label>
+                        <Form.Control
+                          name="cliente"
+                          value={form.cliente}
+                          onChange={onChange}
+                          placeholder="Nome da parte"
+                          isInvalid={Boolean(formErrors.cliente)}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.cliente}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Ramo do direito</Form.Label>
+                        <Form.Select
+                          name="tipoAcao"
+                          value={form.tipoAcao}
+                          onChange={onChange}
+                          isInvalid={Boolean(formErrors.tipoAcao)}
+                        >
+                          <option value="">Selecione o ramo</option>
+                          {legalBranches.map((branch) => (
+                            <option key={branch} value={branch}>
+                              {branch}
+                            </option>
+                          ))}
+                        </Form.Select>
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.tipoAcao}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Tese principal</Form.Label>
+                        <Form.Control
+                          name="tese"
+                          value={form.tese}
+                          onChange={onChange}
+                          placeholder="Ex.: ausencia de responsabilidade"
+                          isInvalid={Boolean(formErrors.tese)}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.tese}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col xs={12}>
+                      <Form.Group>
+                        <Form.Label>Observacoes para o agente</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={4}
+                          name="observacoes"
+                          value={form.observacoes}
+                          onChange={onChange}
+                          placeholder="Contexto do caso e orientacoes para a defesa."
+                          isInvalid={Boolean(formErrors.observacoes)}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.observacoes}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col xs={12}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={`upload-box ${dragging ? "is-dragging" : ""} ${
+                          uploadedFile ? "has-file" : ""
+                        }`}
+                        onClick={openPicker}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") openPicker();
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          setDragging(true);
+                        }}
+                        onDragLeave={(event) => {
+                          event.preventDefault();
+                          setDragging(false);
+                        }}
+                        onDrop={handleDrop}
+                      >
+                        <Upload size={28} className="mb-2" />
+                        <div className="fw-semibold">Upload da peca base</div>
+                        <small className="text-secondary">
+                          Arraste ou clique para anexar DOCX, DOC ou PDF.
+                        </small>
+                      </div>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".doc,.docx,.pdf"
+                        className="d-none"
+                        onChange={handleFileInput}
+                      />
+
+                      {uploadedFile && (
+                        <div className="upload-file-summary mt-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <Paperclip />
+                            <div>
+                              <div className="fw-semibold">{uploadedFile.name}</div>
+                              <small className="text-secondary">{fileSizeLabel(uploadedFile)}</small>
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="link"
+                            className="upload-remove p-0"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              onRemoveFile();
+                            }}
+                          >
+                            <XCircle /> Remover
+                          </Button>
+                        </div>
+                      )}
+
+                      {uploadValidation && <div className="upload-feedback-error">{uploadValidation}</div>}
+                    </Col>
+                  </Row>
+
+                  <div className="d-flex flex-wrap gap-2 mt-4">
+                    <Button type="submit" variant="dark" disabled={loading}>
+                      {loading ? "Processando..." : "Enviar para IA"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline-dark"
+                      disabled={loading}
+                      onClick={onSaveDraft}
+                    >
+                      Salvar rascunho
+                    </Button>
+                  </div>
+
+                  {draftInfo && <div className="draft-info mt-3">{draftInfo}</div>}
+                </Form>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          <Col lg={5}>
+            <div className="d-grid gap-4 h-100">
+              <Card className="dashboard-card border-0">
+                <Card.Body className="p-4">
+                  <h3 className="h5 mb-2">Edicao ao vivo da defesa</h3>
+                  <p className="text-secondary small mb-3">
+                    Ajuste o texto livremente antes de exportar.
+                  </p>
+
+                  <Form.Group>
+                    <Form.Control
+                      as="textarea"
+                      rows={16}
+                      value={liveDraft}
+                      onChange={onLiveDraftChange}
+                      className="live-editor-area"
+                      placeholder="A defesa editada em tempo real sera exibida aqui."
+                    />
+                  </Form.Group>
+
+                  <div className="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
+                    <Button variant="outline-dark" size="sm" onClick={onResetLiveDraft}>
+                      Atualizar com texto gerado
+                    </Button>
+                    <small className="text-secondary">
+                      {liveDraftTouched ? "Edicao manual ativa" : "Texto sincronizado com o formulario"}
+                    </small>
+                  </div>
+                </Card.Body>
+              </Card>
+
+              <Card className="side-info-card border-0">
+                <Card.Body className="p-4">
+                  <h3 className="h5 mb-3">Regras do agente juridico</h3>
+                  <div className="agent-rule-list">
+                    {agentRules.map((rule) => (
+                      <div key={rule} className="rule-item">
+                        <span className="rule-marker" />
+                        <span>{rule}</span>
+                      </div>
                     ))}
-                  </tbody>
-                </Table>
-              </div>
-            </Card.Body>
-          </Card>
-        </Container>
-      </section>
-    </>
+                  </div>
+                </Card.Body>
+              </Card>
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    </section>
   );
 }

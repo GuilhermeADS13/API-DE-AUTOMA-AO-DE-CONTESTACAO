@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 
 import AppNavbar from "./components/AppNavbar";
+import AuthModal from "./components/AuthModal";
 import HeroSection from "./components/HeroSection";
 import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
@@ -10,11 +11,14 @@ import AppFooter from "./components/AppFooter";
 import { historyItems } from "./data/mockData";
 
 const DRAFT_STORAGE_KEY = "jurisflow:draft:v2";
+const AUTH_USERS_STORAGE_KEY = "jurisflow:auth:users:v1";
+const AUTH_SESSION_STORAGE_KEY = "jurisflow:auth:session:v1";
+const AGENT_API_URL = import.meta.env.VITE_IA_ENDPOINT || "http://localhost:8000/api/gerar-contestacao";
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"];
 
 function normalizeFileName(value) {
-  return (value || "contestacao")
+  return (value || "defesa")
     .toLowerCase()
     .replace(/[^\w-]+/g, "-")
     .replace(/-+/g, "-")
@@ -52,14 +56,85 @@ function readDraftFromStorage() {
   }
 }
 
+function readStoredUsers() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const saved = window.localStorage.getItem(AUTH_USERS_STORAGE_KEY);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readStoredSession() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const saved = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+    if (!saved) return null;
+    return JSON.parse(saved);
+  } catch {
+    return null;
+  }
+}
+
+function persistUsers(users) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(users));
+}
+
+function persistSession(session) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
+}
+
+function readValidSession() {
+  const session = readStoredSession();
+  if (!session?.email) return null;
+
+  const users = readStoredUsers();
+  const hasUser = users.some((user) => user.email === session.email);
+  if (!hasUser) {
+    clearSession();
+    return null;
+  }
+
+  return {
+    name: session.name || "Conta",
+    email: session.email,
+  };
+}
+
 export default function App() {
   const [draftSeed] = useState(readDraftFromStorage);
+  const [currentPage, setCurrentPage] = useState("inicio");
 
-  const [showModal, setShowModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [reviewSent, setReviewSent] = useState(false);
   const [lastCaseId, setLastCaseId] = useState(null);
+  const [authUser, setAuthUser] = useState(readValidSession);
+  const [authMode, setAuthMode] = useState("login");
+  const [authForm, setAuthForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [authErrors, setAuthErrors] = useState({});
+  const [authFeedback, setAuthFeedback] = useState(null);
 
   const [form, setForm] = useState(() => ({
     processo: "",
@@ -82,36 +157,40 @@ export default function App() {
     validacao: 92,
   });
 
+  const [liveDraft, setLiveDraft] = useState("");
+  const [liveDraftTouched, setLiveDraftTouched] = useState(false);
+
   const completion = useMemo(() => {
     const fields = [...Object.values(form), uploadedFile ? "arquivo" : ""];
     const filled = fields.filter(Boolean).length;
     return Math.round((filled / fields.length) * 100);
   }, [form, uploadedFile]);
 
-  const checklist = useMemo(
-    () => ({
-      pecaBase: Boolean(uploadedFile),
-      dadosProcessuais: Boolean(form.processo.trim() && form.cliente.trim()),
-      tesePrincipal: Boolean(form.tese.trim() && form.tipoAcao.trim()),
-      revisaoHumana: reviewSent || submitted,
-    }),
-    [uploadedFile, form, reviewSent, submitted],
-  );
-
-  const previewParagraphs = useMemo(() => {
+  const generatedPreviewParagraphs = useMemo(() => {
     const cliente = form.cliente.trim() || "a parte requerida";
-    const tipoAcao = form.tipoAcao.trim() || "a demanda em analise";
+    const tipoAcao = form.tipoAcao.trim() || "ramo juridico ainda nao definido";
     const tese = form.tese.trim() || "a tese principal definida";
     const observacoes = form.observacoes.trim();
 
     return [
-      `No caso de ${tipoAcao.toLowerCase()}, ${cliente} apresenta contestacao e destaca ausencia de pressupostos para procedencia do pedido inicial.`,
+      `No ambito de ${tipoAcao.toLowerCase()}, ${cliente} apresenta defesa e destaca ausencia de pressupostos para procedencia do pedido inicial.`,
       `O agente recomenda reforco argumentativo com base em ${tese.toLowerCase()}, mantendo linguagem juridica formal e estrutura definida pelo escritorio.`,
       observacoes
         ? `Observacoes relevantes para a equipe: ${observacoes}`
         : "O documento segue para revisao humana antes da exportacao final.",
     ];
   }, [form]);
+
+  const generatedDraftText = useMemo(
+    () => generatedPreviewParagraphs.join("\n\n"),
+    [generatedPreviewParagraphs],
+  );
+
+  useEffect(() => {
+    if (!liveDraftTouched) {
+      setLiveDraft(generatedDraftText);
+    }
+  }, [generatedDraftText, liveDraftTouched]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -120,6 +199,160 @@ export default function App() {
       const next = { ...prev };
       delete next[name];
       return next;
+    });
+  };
+
+  const handleLiveDraftChange = (event) => {
+    setLiveDraftTouched(true);
+    setLiveDraft(event.target.value);
+  };
+
+  const handleResetLiveDraft = () => {
+    setLiveDraft(generatedDraftText);
+    setLiveDraftTouched(false);
+  };
+
+  const openAuthModal = (mode = "login") => {
+    setAuthMode(mode);
+    setAuthErrors({});
+    setAuthFeedback(null);
+    setAuthForm({
+      name: "",
+      email: "",
+      password: "",
+    });
+    setShowAuthModal(true);
+  };
+
+  const closeAuthModal = () => {
+    setShowAuthModal(false);
+    setAuthErrors({});
+    setAuthFeedback(null);
+  };
+
+  const handleAuthModeChange = (mode) => {
+    setAuthMode(mode);
+    setAuthErrors({});
+    setAuthFeedback(null);
+    setAuthForm({
+      name: "",
+      email: "",
+      password: "",
+    });
+  };
+
+  const handleAuthFieldChange = (event) => {
+    const { name, value } = event.target;
+    setAuthForm((prev) => ({ ...prev, [name]: value }));
+    setAuthErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const validateAuthForm = () => {
+    const errors = {};
+
+    if (authMode === "signup" && !authForm.name.trim()) {
+      errors.name = "Informe o nome para criar a conta.";
+    }
+    if (!isValidEmail(authForm.email)) {
+      errors.email = "Informe um e-mail valido.";
+    }
+    if (authForm.password.trim().length < 6) {
+      errors.password = "Use uma senha com pelo menos 6 caracteres.";
+    }
+
+    return errors;
+  };
+
+  const handleAuthSubmit = (event) => {
+    event.preventDefault();
+    const errors = validateAuthForm();
+
+    if (Object.keys(errors).length) {
+      setAuthErrors(errors);
+      setAuthFeedback({
+        variant: "danger",
+        text: "Revise os dados de acesso antes de continuar.",
+      });
+      return;
+    }
+
+    const email = authForm.email.trim().toLowerCase();
+    const users = readStoredUsers();
+
+    if (authMode === "signup") {
+      const alreadyExists = users.some((user) => user.email === email);
+      if (alreadyExists) {
+        setAuthErrors({ email: "Ja existe uma conta com este e-mail." });
+        setAuthFeedback({
+          variant: "danger",
+          text: "Este e-mail ja esta cadastrado. Entre com sua conta ou use outro e-mail.",
+        });
+        return;
+      }
+
+      const newUser = {
+        id: `USR-${Date.now()}`,
+        name: authForm.name.trim(),
+        email,
+        password: authForm.password,
+      };
+
+      persistUsers([...users, newUser]);
+      const session = {
+        name: newUser.name,
+        email: newUser.email,
+      };
+
+      persistSession(session);
+      setAuthUser(session);
+      setShowAuthModal(false);
+      setFeedback({
+        variant: "success",
+        text: `Conta criada com sucesso. Bem-vindo ao workspace, ${newUser.name}.`,
+      });
+      return;
+    }
+
+    const matchedUser = users.find(
+      (user) => user.email === email && user.password === authForm.password,
+    );
+
+    if (!matchedUser) {
+      setAuthErrors({
+        email: "Verifique o e-mail informado.",
+        password: "Verifique a senha informada.",
+      });
+      setAuthFeedback({
+        variant: "danger",
+        text: "Nao encontramos uma conta com esse e-mail e senha.",
+      });
+      return;
+    }
+
+    const session = {
+      name: matchedUser.name,
+      email: matchedUser.email,
+    };
+
+    persistSession(session);
+    setAuthUser(session);
+    setShowAuthModal(false);
+    setFeedback({
+      variant: "success",
+      text: `Acesso liberado. Bem-vindo de volta, ${matchedUser.name}.`,
+    });
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    setAuthUser(null);
+    setFeedback({
+      variant: "info",
+      text: "Sessao encerrada com sucesso.",
     });
   };
 
@@ -164,7 +397,7 @@ export default function App() {
 
     if (!form.processo.trim()) errors.processo = "Informe o numero do processo.";
     if (!form.cliente.trim()) errors.cliente = "Informe o cliente ou parte.";
-    if (!form.tipoAcao.trim()) errors.tipoAcao = "Selecione o tipo de acao.";
+    if (!form.tipoAcao.trim()) errors.tipoAcao = "Selecione o ramo do direito.";
     if (!form.tese.trim()) errors.tese = "Informe a tese principal.";
     if (!form.observacoes.trim()) errors.observacoes = "Adicione orientacoes para o agente.";
     if (!uploadedFile) errors.upload = "Anexe a peca base para continuar.";
@@ -195,8 +428,8 @@ export default function App() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     const errors = validateForm();
 
     if (Object.keys(errors).length) {
@@ -211,7 +444,6 @@ export default function App() {
 
     setLoading(true);
     setSubmitted(false);
-    setReviewSent(false);
     setFeedback(null);
     setAutomationStatus({ webhook: 100, ia: 32, validacao: 18 });
 
@@ -224,42 +456,81 @@ export default function App() {
         naturezaCaso: form.tipoAcao,
         status: "Em analise",
         data: today,
-        tipo: "Contestacao em processamento",
+        tipo: "Defesa em processamento",
       },
       ...prev,
     ]);
 
-    window.setTimeout(() => {
+    const payload = {
+      numero_processo: form.processo.trim(),
+      autor: form.cliente.trim(),
+      reu: "Nao informado",
+      tipo_acao: form.tipoAcao.trim(),
+      fatos: form.observacoes.trim(),
+      pedido_autor: form.tese.trim(),
+      arquivo_base: uploadedFile?.name || "",
+      texto_editado_ao_vivo: (liveDraft.trim() || generatedDraftText).trim(),
+    };
+
+    try {
+      const response = await fetch(AGENT_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Falha HTTP ${response.status}`);
+      }
+
       setLoading(false);
       setSubmitted(true);
-      setShowModal(true);
+      setShowResultModal(true);
       setAutomationStatus({ webhook: 100, ia: 86, validacao: 92 });
       setHistory((prev) =>
         prev.map((item) =>
           item.id === nextCaseId
-            ? { ...item, status: "Concluida", tipo: "Contestacao editada" }
+            ? { ...item, status: "Concluida", tipo: "Defesa editada" }
             : item,
         ),
       );
       setFeedback({
         variant: "success",
-        text: "Automacao concluida. Documento pronto para revisao.",
+        text: "Caso enviado ao agente de IA com sucesso. Defesa pronta para revisao.",
       });
-    }, 1500);
+      setCurrentPage("dashboard");
+    } catch {
+      setLoading(false);
+      setAutomationStatus({ webhook: 42, ia: 0, validacao: 0 });
+      setHistory((prev) =>
+        prev.map((item) =>
+          item.id === nextCaseId
+            ? { ...item, status: "Falha no envio", tipo: "Erro de integracao" }
+            : item,
+        ),
+      );
+      setFeedback({
+        variant: "danger",
+        text: "Nao foi possivel enviar para o agente de IA. Verifique se o backend esta ativo em http://localhost:8000.",
+      });
+    }
   };
 
   const buildDocumentText = () => {
     const lines = [
-      "CONTESTACAO - MINUTA GERADA PELO SISTEMA",
+      "DEFESA - MINUTA GERADA PELO SISTEMA",
       "",
       `Processo: ${form.processo || "-"}`,
       `Cliente/Parte: ${form.cliente || "-"}`,
-      `Tipo de acao: ${form.tipoAcao || "-"}`,
+      `Ramo do direito: ${form.tipoAcao || "-"}`,
       `Tese principal: ${form.tese || "-"}`,
       `Arquivo base: ${uploadedFile ? uploadedFile.name : "-"}`,
       "",
-      "TRECHO EDITADO PELO AGENTE",
-      ...previewParagraphs,
+      "EDICAO AO VIVO",
+      liveDraft.trim() || generatedDraftText,
     ];
     return lines.join("\n");
   };
@@ -276,7 +547,7 @@ export default function App() {
     const blob = new Blob([buildDocumentText()], {
       type: "application/msword;charset=utf-8",
     });
-    const baseName = normalizeFileName(form.processo || lastCaseId || "contestacao");
+    const baseName = normalizeFileName(form.processo || lastCaseId || "defesa");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${baseName}.doc`;
@@ -296,16 +567,16 @@ export default function App() {
     const printable = `
       <html>
         <head>
-          <title>Contestacao ${form.processo || ""}</title>
+          <title>Defesa ${form.processo || ""}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 32px; line-height: 1.6; color: #222; }
             h1 { font-size: 18px; margin-bottom: 16px; }
-            p { margin: 0 0 12px 0; }
+            p { margin: 0 0 12px 0; white-space: pre-line; }
           </style>
         </head>
         <body>
-          <h1>Contestacao - Minuta</h1>
-          ${previewParagraphs.map((text) => `<p>${text}</p>`).join("")}
+          <h1>Defesa - Minuta</h1>
+          <p>${(liveDraft.trim() || generatedDraftText).replace(/\n/g, "<br/>")}</p>
         </body>
       </html>
     `;
@@ -325,83 +596,114 @@ export default function App() {
     printWindow.print();
   };
 
-  const handleSendReview = () => {
-    if (!lastCaseId) {
-      setFeedback({
-        variant: "warning",
-        text: "Nenhum caso enviado para revisao ainda.",
-      });
-      return;
-    }
-
-    setReviewSent(true);
-    setHistory((prev) =>
-      prev.map((item) =>
-        item.id === lastCaseId ? { ...item, status: "Aguardando revisao" } : item,
-      ),
-    );
-    setFeedback({
-      variant: "info",
-      text: "Documento encaminhado para revisao humana.",
-    });
+  const handleNavigate = (pageId) => {
+    setCurrentPage(pageId);
   };
 
   return (
     <div className="app-shell min-vh-100">
-      <AppNavbar />
-
-      <HeroSection />
-
-      <StatsSection />
-
-      <MainPanelSection
-        form={form}
-        completion={completion}
-        submitted={submitted}
-        loading={loading}
-        history={history}
-        formErrors={formErrors}
-        uploadError={uploadError}
-        uploadedFile={uploadedFile}
-        draftInfo={draftInfo}
-        feedback={feedback}
-        onChange={handleChange}
-        onSubmit={handleSubmit}
-        onFileSelect={handleFileSelect}
-        onRemoveFile={handleRemoveFile}
-        onSaveDraft={handleSaveDraft}
+      <AppNavbar
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        authUser={authUser}
+        onOpenLogin={openAuthModal}
+        onOpenSignup={openAuthModal}
+        onLogout={handleLogout}
       />
 
-      <DashboardSection
-        automationStatus={automationStatus}
-        checklist={checklist}
-        previewParagraphs={previewParagraphs}
-        submitted={submitted}
-        reviewSent={reviewSent}
-        onDownloadDoc={handleDownloadDoc}
-        onDownloadPdf={handleDownloadPdf}
-        onSendReview={handleSendReview}
-      />
+      {currentPage === "inicio" && (
+        <>
+          <HeroSection onNavigate={handleNavigate} />
+          <StatsSection />
+        </>
+      )}
+
+      {currentPage === "painel" && (
+        <MainPanelSection
+          form={form}
+          completion={completion}
+          submitted={submitted}
+          loading={loading}
+          formErrors={formErrors}
+          uploadError={uploadError}
+          uploadedFile={uploadedFile}
+          draftInfo={draftInfo}
+          feedback={feedback}
+          liveDraft={liveDraft}
+          liveDraftTouched={liveDraftTouched}
+          onChange={handleChange}
+          onSubmit={handleSubmit}
+          onFileSelect={handleFileSelect}
+          onRemoveFile={handleRemoveFile}
+          onSaveDraft={handleSaveDraft}
+          onLiveDraftChange={handleLiveDraftChange}
+          onResetLiveDraft={handleResetLiveDraft}
+        />
+      )}
+
+      {currentPage === "dashboard" && (
+        <>
+          <DashboardSection history={history} automationStatus={automationStatus} />
+          <section className="pb-5">
+            <div className="container">
+              <div className="d-flex flex-wrap gap-2">
+                <Button variant="dark" onClick={handleDownloadDoc} disabled={!submitted}>
+                  Baixar DOCX
+                </Button>
+                <Button variant="outline-dark" onClick={handleDownloadPdf} disabled={!submitted}>
+                  Baixar PDF
+                </Button>
+                <Button variant="outline-secondary" onClick={() => handleNavigate("painel")}>
+                  Voltar para edicao
+                </Button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       <AppFooter />
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      <AuthModal
+        show={showAuthModal}
+        mode={authMode}
+        form={authForm}
+        errors={authErrors}
+        feedback={authFeedback}
+        onHide={closeAuthModal}
+        onModeChange={handleAuthModeChange}
+        onFieldChange={handleAuthFieldChange}
+        onSubmit={handleAuthSubmit}
+      />
+
+      <Modal
+        show={showResultModal}
+        onHide={() => setShowResultModal(false)}
+        centered
+        dialogClassName="platform-modal"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Envio concluido</Modal.Title>
         </Modal.Header>
 
         <Modal.Body>
-          Seu caso foi processado com sucesso. A minuta foi atualizada e ja pode
-          ser baixada ou enviada para revisao humana.
+          Sua defesa foi processada com sucesso. O texto esta disponivel na
+          pagina de dashboard para revisao e exportacao.
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Button variant="secondary" onClick={() => setShowResultModal(false)}>
             Fechar
           </Button>
 
-          <Button variant="dark" onClick={() => setShowModal(false)}>
-            Ver fila
+          <Button
+            variant="dark"
+            onClick={() => {
+              setShowResultModal(false);
+              handleNavigate("dashboard");
+            }}
+          >
+            Ir para dashboard
           </Button>
         </Modal.Footer>
       </Modal>

@@ -1,47 +1,72 @@
 export const stats = [
   {
-    label: "Tempo economizado por caso",
-    value: "-78%",
-    detail: "Media em operacoes repetitivas",
+    label: "Tempo medio por defesa",
+    value: "3m42s",
+    detail: "Do envio ao texto inicial pronto para revisao",
   },
   {
-    label: "Produtividade da equipe",
-    value: "+3.4x",
-    detail: "Mais pecas finalizadas por dia",
+    label: "Capacidade por equipe",
+    value: "+240%",
+    detail: "Mais casos tratados sem ampliar a operacao",
   },
   {
-    label: "Conformidade juridica",
+    label: "Conformidade da peca",
     value: "96%",
-    detail: "Saidas dentro do padrao definido",
+    detail: "Saidas alinhadas ao padrao juridico do escritorio",
   },
   {
-    label: "Escritorios ativos",
+    label: "Fluxos em producao",
     value: "32",
-    detail: "Uso recorrente do fluxo automatizado",
+    detail: "Operacoes juridicas ativas na plataforma",
   },
+];
+
+export const legalBranches = [
+  "Direito Civil",
+  "Direito do Consumidor",
+  "Direito Empresarial",
+  "Direito Contratual",
+  "Direito Imobiliario",
+  "Direito de Familia e Sucessoes",
+  "Direito do Trabalho",
+  "Direito Previdenciario",
+  "Direito Tributario",
+  "Direito Administrativo",
+  "Direito Constitucional",
+  "Direito Penal",
+  "Direito Processual Civil",
+  "Direito Processual Penal",
+  "Direito Ambiental",
+  "Direito Digital",
+  "Direito Bancario e Financeiro",
+  "Direito Eleitoral",
+  "Direito Internacional",
+  "Direito Agrario",
+  "Direito Medico e da Saude",
+  "Direito Maritimo e Aeronautico",
 ];
 
 export const historyItems = [
   {
     id: "CTR-2026-001",
-    naturezaCaso: "Acao de cobranca",
+    naturezaCaso: "Direito do Trabalho",
     status: "Concluida",
     data: "10/03/2026",
-    tipo: "Contestacao editada",
+    tipo: "Defesa editada",
   },
   {
     id: "CTR-2026-002",
-    naturezaCaso: "Relacao de consumo",
+    naturezaCaso: "Direito Tributario",
     status: "Em analise",
     data: "10/03/2026",
     tipo: "Revisao de fundamentacao",
   },
   {
     id: "CTR-2026-003",
-    naturezaCaso: "Responsabilidade civil",
+    naturezaCaso: "Direito do Consumidor",
     status: "Aguardando revisao",
     data: "09/03/2026",
-    tipo: "Contestacao editada",
+    tipo: "Defesa editada",
   },
 ];
 
@@ -53,8 +78,8 @@ export const agentRules = [
 ];
 
 export const dashboardCards = [
-  { label: "Casos em fila", value: "07" },
-  { label: "Em revisao humana", value: "14" },
-  { label: "Prontas para download", value: "22" },
-  { label: "Taxa de conformidade", value: "96%" },
+  { label: "Casos em processamento", value: "07" },
+  { label: "Aguardando advogado", value: "14" },
+  { label: "Prontas para exportacao", value: "22" },
+  { label: "Precisao media do agente", value: "96%" },
 ];

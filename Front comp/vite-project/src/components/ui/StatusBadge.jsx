@@ -4,18 +4,18 @@ import { Badge } from "react-bootstrap";
 export default function StatusBadge({ status }) {
   const normalized = status.toLowerCase();
 
-  let variant = "secondary";
+  let tone = "neutral";
 
   if (normalized.includes("conclu")) {
-    variant = "success";
+    tone = "success";
   } else if (normalized.includes("analise")) {
-    variant = "warning";
+    tone = "warning";
   } else if (normalized.includes("revis")) {
-    variant = "primary";
+    tone = "info";
   }
 
   return (
-    <Badge pill bg={variant} className="status-pill">
+    <Badge pill className={`status-pill status-pill-${tone}`}>
       {status}
     </Badge>
   );
