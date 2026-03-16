@@ -11,11 +11,17 @@ import AppFooter from "./components/AppFooter";
 import { historyItems } from "./data/mockData";
 
 const DRAFT_STORAGE_KEY = "jurisflow:draft:v2";
-const AUTH_USERS_STORAGE_KEY = "jurisflow:auth:users:v1";
 const AUTH_SESSION_STORAGE_KEY = "jurisflow:auth:session:v1";
-const AGENT_API_URL = import.meta.env.VITE_IA_ENDPOINT || "http://localhost:8000/api/gerar-contestacao";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const AGENT_API_URL = import.meta.env.VITE_IA_ENDPOINT || `${API_BASE_URL}/gerar-contestacao`;
+const AUTH_SIGNUP_API_URL = `${API_BASE_URL}/usuarios/cadastro`;
+const AUTH_LOGIN_API_URL = `${API_BASE_URL}/usuarios/login`;
+const AUTH_LOGOUT_API_URL = `${API_BASE_URL}/usuarios/logout`;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"];
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 12;
 
 function normalizeFileName(value) {
   return (value || "defesa")
@@ -56,19 +62,6 @@ function readDraftFromStorage() {
   }
 }
 
-function readStoredUsers() {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const saved = window.localStorage.getItem(AUTH_USERS_STORAGE_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function readStoredSession() {
   if (typeof window === "undefined") return null;
 
@@ -81,11 +74,6 @@ function readStoredSession() {
   }
 }
 
-function persistUsers(users) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(users));
-}
-
 function persistSession(session) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
@@ -96,24 +84,91 @@ function clearSession() {
   window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
 }
 
+function normalizeEmail(value) {
+  return (value || "").trim().toLowerCase();
+}
+
 function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
+  return EMAIL_REGEX.test(normalizeEmail(value));
+}
+
+async function getApiErrorMessage(response, fallbackMessage) {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === "string" && data.detail.trim()) {
+      return data.detail;
+    }
+    if (typeof data?.message === "string" && data.message.trim()) {
+      return data.message;
+    }
+  } catch {
+    // Ignore parse errors and keep fallback message.
+  }
+
+  return fallbackMessage;
+}
+
+function getPasswordChecks(value) {
+  const password = value || "";
+  return {
+    minLength: password.length >= PASSWORD_MIN_LENGTH,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSymbol: /[^A-Za-z0-9]/.test(password),
+    maxLength: password.length <= PASSWORD_MAX_LENGTH,
+  };
+}
+
+function validateAuthField(name, value, mode) {
+  const fieldValue = value || "";
+
+  if (name === "name") {
+    if (mode !== "signup") return "";
+    if (!fieldValue.trim()) return "Informe o nome para criar a conta.";
+    if (fieldValue.trim().length < 3) return "Use pelo menos 3 caracteres no nome.";
+    return "";
+  }
+
+  if (name === "email") {
+    if (!fieldValue.trim()) return "Informe o e-mail.";
+    if (!isValidEmail(fieldValue)) return "Informe um e-mail valido.";
+    return "";
+  }
+
+  if (name === "password") {
+    if (!fieldValue.trim()) return "Informe a senha.";
+    if (fieldValue.length > PASSWORD_MAX_LENGTH) {
+      return `A senha deve ter no maximo ${PASSWORD_MAX_LENGTH} caracteres.`;
+    }
+
+    if (mode === "signup") {
+      const checks = getPasswordChecks(fieldValue);
+      if (!checks.minLength || !checks.hasUppercase || !checks.hasLowercase || !checks.hasNumber || !checks.hasSymbol) {
+        return "A senha deve ter 8+ caracteres, com maiuscula, minuscula, numero e simbolo.";
+      }
+    }
+
+    return "";
+  }
+
+  return "";
 }
 
 function readValidSession() {
   const session = readStoredSession();
   if (!session?.email) return null;
-
-  const users = readStoredUsers();
-  const hasUser = users.some((user) => user.email === session.email);
-  if (!hasUser) {
+  const normalizedEmail = normalizeEmail(session.email);
+  if (!isValidEmail(normalizedEmail)) {
     clearSession();
     return null;
   }
 
   return {
+    id: session.id || "",
     name: session.name || "Conta",
-    email: session.email,
+    email: normalizedEmail,
+    token: session.token || "",
   };
 }
 
@@ -133,8 +188,10 @@ export default function App() {
     email: "",
     password: "",
   });
+  const [authTouched, setAuthTouched] = useState({});
   const [authErrors, setAuthErrors] = useState({});
   const [authFeedback, setAuthFeedback] = useState(null);
+  const [authLoading, setAuthLoading] = useState(false);
 
   const [form, setForm] = useState(() => ({
     processo: "",
@@ -165,6 +222,11 @@ export default function App() {
     const filled = fields.filter(Boolean).length;
     return Math.round((filled / fields.length) * 100);
   }, [form, uploadedFile]);
+
+  const authPasswordChecks = useMemo(
+    () => getPasswordChecks(authForm.password),
+    [authForm.password],
+  );
 
   const generatedPreviewParagraphs = useMemo(() => {
     const cliente = form.cliente.trim() || "a parte requerida";
@@ -214,8 +276,10 @@ export default function App() {
 
   const openAuthModal = (mode = "login") => {
     setAuthMode(mode);
+    setAuthTouched({});
     setAuthErrors({});
     setAuthFeedback(null);
+    setAuthLoading(false);
     setAuthForm({
       name: "",
       email: "",
@@ -226,14 +290,18 @@ export default function App() {
 
   const closeAuthModal = () => {
     setShowAuthModal(false);
+    setAuthTouched({});
     setAuthErrors({});
     setAuthFeedback(null);
+    setAuthLoading(false);
   };
 
   const handleAuthModeChange = (mode) => {
     setAuthMode(mode);
+    setAuthTouched({});
     setAuthErrors({});
     setAuthFeedback(null);
+    setAuthLoading(false);
     setAuthForm({
       name: "",
       email: "",
@@ -246,29 +314,58 @@ export default function App() {
     setAuthForm((prev) => ({ ...prev, [name]: value }));
     setAuthErrors((prev) => {
       const next = { ...prev };
-      delete next[name];
+      if (!authTouched[name]) {
+        delete next[name];
+        return next;
+      }
+
+      const fieldError = validateAuthField(name, value, authMode);
+      if (fieldError) {
+        next[name] = fieldError;
+      } else {
+        delete next[name];
+      }
+
+      return next;
+    });
+  };
+
+  const handleAuthFieldBlur = (event) => {
+    const { name, value } = event.target;
+    setAuthTouched((prev) => ({ ...prev, [name]: true }));
+    setAuthErrors((prev) => {
+      const next = { ...prev };
+      const fieldError = validateAuthField(name, value, authMode);
+      if (fieldError) {
+        next[name] = fieldError;
+      } else {
+        delete next[name];
+      }
       return next;
     });
   };
 
   const validateAuthForm = () => {
-    const errors = {};
-
-    if (authMode === "signup" && !authForm.name.trim()) {
-      errors.name = "Informe o nome para criar a conta.";
-    }
-    if (!isValidEmail(authForm.email)) {
-      errors.email = "Informe um e-mail valido.";
-    }
-    if (authForm.password.trim().length < 6) {
-      errors.password = "Use uma senha com pelo menos 6 caracteres.";
-    }
-
-    return errors;
+    const fields = authMode === "signup" ? ["name", "email", "password"] : ["email", "password"];
+    return fields.reduce((accumulator, fieldName) => {
+      const fieldError = validateAuthField(fieldName, authForm[fieldName], authMode);
+      if (fieldError) {
+        accumulator[fieldName] = fieldError;
+      }
+      return accumulator;
+    }, {});
   };
 
-  const handleAuthSubmit = (event) => {
+  const handleAuthSubmit = async (event) => {
     event.preventDefault();
+    if (authLoading) return;
+
+    setAuthTouched(
+      authMode === "signup"
+        ? { name: true, email: true, password: true }
+        : { email: true, password: true },
+    );
+
     const errors = validateAuthForm();
 
     if (Object.keys(errors).length) {
@@ -280,31 +377,97 @@ export default function App() {
       return;
     }
 
-    const email = authForm.email.trim().toLowerCase();
-    const users = readStoredUsers();
+    setAuthLoading(true);
+    setAuthFeedback(null);
 
-    if (authMode === "signup") {
-      const alreadyExists = users.some((user) => user.email === email);
-      if (alreadyExists) {
-        setAuthErrors({ email: "Ja existe uma conta com este e-mail." });
-        setAuthFeedback({
-          variant: "danger",
-          text: "Este e-mail ja esta cadastrado. Entre com sua conta ou use outro e-mail.",
+    try {
+      if (authMode === "signup") {
+        const response = await fetch(AUTH_SIGNUP_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: authForm.name.trim(),
+            email: normalizeEmail(authForm.email),
+            password: authForm.password,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorMessage = await getApiErrorMessage(
+            response,
+            "Nao foi possivel criar sua conta agora.",
+          );
+
+          if (response.status === 409) {
+            setAuthErrors({ email: "Ja existe uma conta com este e-mail." });
+          }
+
+          setAuthFeedback({
+            variant: "danger",
+            text: errorMessage,
+          });
+          return;
+        }
+
+        const data = await response.json();
+        const usuario = data?.usuario || {};
+        const session = {
+          id: usuario.id || "",
+          name: usuario.nome || authForm.name.trim(),
+          email: normalizeEmail(usuario.email || authForm.email),
+          token: data?.token || "",
+        };
+
+        persistSession(session);
+        setAuthUser(session);
+        setShowAuthModal(false);
+        setFeedback({
+          variant: "success",
+          text: `Conta criada com sucesso. Bem-vindo ao workspace, ${session.name}.`,
         });
         return;
       }
 
-      const newUser = {
-        id: `USR-${Date.now()}`,
-        name: authForm.name.trim(),
-        email,
-        password: authForm.password,
-      };
+      const response = await fetch(AUTH_LOGIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizeEmail(authForm.email),
+          password: authForm.password,
+        }),
+      });
 
-      persistUsers([...users, newUser]);
+      if (!response.ok) {
+        const errorMessage = await getApiErrorMessage(
+          response,
+          "Nao encontramos uma conta com esse e-mail e senha.",
+        );
+
+        if (response.status === 401) {
+          setAuthErrors({
+            email: "Verifique o e-mail informado.",
+            password: "Verifique a senha informada.",
+          });
+        }
+
+        setAuthFeedback({
+          variant: "danger",
+          text: errorMessage,
+        });
+        return;
+      }
+
+      const data = await response.json();
+      const usuario = data?.usuario || {};
       const session = {
-        name: newUser.name,
-        email: newUser.email,
+        id: usuario.id || "",
+        name: usuario.nome || "Conta",
+        email: normalizeEmail(usuario.email || authForm.email),
+        token: data?.token || "",
       };
 
       persistSession(session);
@@ -312,47 +475,48 @@ export default function App() {
       setShowAuthModal(false);
       setFeedback({
         variant: "success",
-        text: `Conta criada com sucesso. Bem-vindo ao workspace, ${newUser.name}.`,
+        text: `Acesso liberado. Bem-vindo de volta, ${session.name}.`,
       });
-      return;
-    }
-
-    const matchedUser = users.find(
-      (user) => user.email === email && user.password === authForm.password,
-    );
-
-    if (!matchedUser) {
-      setAuthErrors({
-        email: "Verifique o e-mail informado.",
-        password: "Verifique a senha informada.",
-      });
+    } catch {
       setAuthFeedback({
         variant: "danger",
-        text: "Nao encontramos uma conta com esse e-mail e senha.",
+        text: "Nao foi possivel conectar com o backend de autenticacao.",
       });
-      return;
+    } finally {
+      setAuthLoading(false);
     }
-
-    const session = {
-      name: matchedUser.name,
-      email: matchedUser.email,
-    };
-
-    persistSession(session);
-    setAuthUser(session);
-    setShowAuthModal(false);
-    setFeedback({
-      variant: "success",
-      text: `Acesso liberado. Bem-vindo de volta, ${matchedUser.name}.`,
-    });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    let remoteLogoutFailed = false;
+
+    try {
+      if (authUser?.token) {
+        const response = await fetch(AUTH_LOGOUT_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: authUser.token,
+          }),
+        });
+
+        if (!response.ok) {
+          remoteLogoutFailed = true;
+        }
+      }
+    } catch {
+      remoteLogoutFailed = true;
+    }
+
     clearSession();
     setAuthUser(null);
     setFeedback({
-      variant: "info",
-      text: "Sessao encerrada com sucesso.",
+      variant: remoteLogoutFailed ? "warning" : "info",
+      text: remoteLogoutFailed
+        ? "Sessao local encerrada, mas nao foi possivel confirmar logout no servidor."
+        : "Sessao encerrada com sucesso.",
     });
   };
 
@@ -670,9 +834,12 @@ export default function App() {
         form={authForm}
         errors={authErrors}
         feedback={authFeedback}
+        loading={authLoading}
+        passwordChecks={authPasswordChecks}
         onHide={closeAuthModal}
         onModeChange={handleAuthModeChange}
         onFieldChange={handleAuthFieldChange}
+        onFieldBlur={handleAuthFieldBlur}
         onSubmit={handleAuthSubmit}
       />
 

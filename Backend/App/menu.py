@@ -13,4 +13,4 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"mensage': "API de Contestação  "}      
+       return {"message": "Hello World"}
