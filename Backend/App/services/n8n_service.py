@@ -1,7 +1,8 @@
+import json
 import os
 from typing import Any
-
-import requests
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 DEFAULT_N8N_WEBHOOK_URL = "http://localhost:5678/webhook/contestacao"
 N8N_TIMEOUT_SECONDS = 30
@@ -18,19 +19,26 @@ def get_n8n_webhook_url() -> str:
 
 def enviar_para_n8n(dados: dict[str, Any]) -> Any:
     webhook_url = get_n8n_webhook_url()
+    body = json.dumps(dados).encode("utf-8")
+    request = Request(
+        url=webhook_url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
 
     try:
-        response = requests.post(webhook_url, json=dados, timeout=N8N_TIMEOUT_SECONDS)
-        response.raise_for_status()
-    except requests.RequestException as error:
+        with urlopen(request, timeout=N8N_TIMEOUT_SECONDS) as response:
+            response_body = response.read()
+    except (HTTPError, URLError, TimeoutError, OSError) as error:
         raise N8NServiceError(
             f"Falha ao acionar o n8n em {webhook_url}. Verifique se o workflow esta ativo."
         ) from error
 
-    if not response.content:
+    if not response_body:
         return {"message": "Workflow acionado sem corpo de resposta."}
 
     try:
-        return response.json()
-    except ValueError:
-        return {"raw_response": response.text}
+        return json.loads(response_body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return {"raw_response": response_body.decode("utf-8", errors="replace")}

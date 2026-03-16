@@ -2,23 +2,108 @@
 
 import os
 from typing import Any
+from urllib.parse import quote_plus
 from uuid import uuid4
 
-import psycopg2
-from psycopg2.extras import Json
+try:
+    import psycopg2
+    from psycopg2.extras import Json as PGJsonAdapter
+except ModuleNotFoundError:
+    psycopg2 = None
+    PGJsonAdapter = None
 
 DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/contestacao_db"
+DEFAULT_DATABASE_HOST = "localhost"
+DEFAULT_DATABASE_PORT = 5432
+DEFAULT_DATABASE_NAME = "contestacao_db"
+DEFAULT_DATABASE_USER = "postgres"
+DEFAULT_DATABASE_PASSWORD = "postgres"
+DEFAULT_DATABASE_SSLMODE = "prefer"
+DEFAULT_DATABASE_CONNECT_TIMEOUT = 5
+
+
+class DatabaseIntegrityError(Exception):
+    pass
+
+
+def _safe_int(value: str, fallback: int) -> int:
+    try:
+        parsed = int(value)
+        return parsed if parsed > 0 else fallback
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _build_database_url_from_parts() -> str:
+    host = os.getenv("DATABASE_HOST", DEFAULT_DATABASE_HOST).strip() or DEFAULT_DATABASE_HOST
+    port = _safe_int(os.getenv("DATABASE_PORT", str(DEFAULT_DATABASE_PORT)), DEFAULT_DATABASE_PORT)
+    name = os.getenv("DATABASE_NAME", DEFAULT_DATABASE_NAME).strip() or DEFAULT_DATABASE_NAME
+    user = os.getenv("DATABASE_USER", DEFAULT_DATABASE_USER).strip() or DEFAULT_DATABASE_USER
+    password = os.getenv("DATABASE_PASSWORD", DEFAULT_DATABASE_PASSWORD).strip()
+    sslmode = os.getenv("DATABASE_SSLMODE", DEFAULT_DATABASE_SSLMODE).strip() or DEFAULT_DATABASE_SSLMODE
+
+    return (
+        f"postgresql://{quote_plus(user)}:{quote_plus(password)}@{host}:{port}/"
+        f"{quote_plus(name)}?sslmode={sslmode}"
+    )
+
+
+def _normalize_database_url(database_url: str) -> str:
+    value = database_url.strip()
+    if value.startswith("postgres://"):
+        return "postgresql://" + value[len("postgres://") :]
+    return value
+
+
+def _mask_database_url(database_url: str) -> str:
+    if "://" not in database_url or "@" not in database_url:
+        return database_url
+
+    scheme, rest = database_url.split("://", 1)
+    auth_part, host_part = rest.split("@", 1)
+    username = auth_part.split(":", 1)[0]
+    if username:
+        return f"{scheme}://{username}:***@{host_part}"
+    return f"{scheme}://***@{host_part}"
 
 
 def _get_database_url() -> str:
-    database_url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL).strip()
-    if not database_url:
-        return DEFAULT_DATABASE_URL
-    return database_url
+    raw_database_url = os.getenv("DATABASE_URL", "").strip()
+    if raw_database_url:
+        return _normalize_database_url(raw_database_url)
+    return _build_database_url_from_parts()
 
 
 def _connect():
-    return psycopg2.connect(_get_database_url(), connect_timeout=5)
+    if psycopg2 is None:
+        raise RuntimeError(
+            "Driver PostgreSQL nao encontrado. Instale `psycopg2-binary` no ambiente do backend."
+        )
+
+    database_url = _get_database_url()
+    timeout = _safe_int(
+        os.getenv("DATABASE_CONNECT_TIMEOUT", str(DEFAULT_DATABASE_CONNECT_TIMEOUT)),
+        DEFAULT_DATABASE_CONNECT_TIMEOUT,
+    )
+
+    try:
+        return psycopg2.connect(database_url, connect_timeout=timeout)
+    except Exception as error:
+        if isinstance(error, psycopg2.OperationalError):
+            raise RuntimeError(
+                "Nao foi possivel conectar ao PostgreSQL. "
+                f"Verifique as variaveis do banco ({_mask_database_url(database_url)})."
+            ) from error
+        raise
+
+
+def ping_database() -> None:
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            row = cursor.fetchone()
+            if row is None or int(row[0]) != 1:
+                raise RuntimeError("Falha no teste de conexao com PostgreSQL.")
 
 
 def init_db() -> None:
@@ -70,17 +155,22 @@ def create_usuario(user_id: str, nome: str, email: str, senha_hash: str) -> dict
 
     with _connect() as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO usuarios (id, nome, email, senha_hash)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, nome, email
-                """,
-                (user_id, nome, email, senha_hash),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                raise RuntimeError("Falha ao criar usuario no banco de dados.")
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO usuarios (id, nome, email, senha_hash)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, nome, email
+                    """,
+                    (user_id, nome, email, senha_hash),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Falha ao criar usuario no banco de dados.")
+            except Exception as error:
+                if psycopg2 is not None and isinstance(error, psycopg2.IntegrityError):
+                    raise DatabaseIntegrityError("Conflito de integridade no banco.") from error
+                raise
         connection.commit()
 
     return {
@@ -186,7 +276,7 @@ def save_contestacao(payload: dict[str, Any], status: str, n8n_resposta: Any) ->
                     str(payload.get("arquivo_base", "")),
                     str(payload.get("texto_editado_ao_vivo", "")),
                     status,
-                    Json(n8n_resposta),
+                    PGJsonAdapter(n8n_resposta) if PGJsonAdapter else n8n_resposta,
                 ),
             )
             row = cursor.fetchone()

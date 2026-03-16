@@ -1,9 +1,9 @@
 from uuid import uuid4
 
-import psycopg2
 from fastapi import APIRouter, HTTPException, status
 
 from App.database import (
+    DatabaseIntegrityError,
     create_sessao_usuario,
     create_usuario,
     get_usuario_por_email,
@@ -34,7 +34,7 @@ async def cadastrar_usuario(payload: UsuarioCadastro) -> dict:
             email=payload.email,
             senha_hash=senha_hash,
         )
-    except psycopg2.IntegrityError as error:
+    except DatabaseIntegrityError as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ja existe uma conta com este e-mail.",

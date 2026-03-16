@@ -1,10 +1,31 @@
 import os
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from App.database import init_db
+from App.database import init_db, ping_database
 from App.routes import contestacao, usuario
+
+
+def load_env_file() -> None:
+    env_path = Path(__file__).resolve().parent / ".env"
+    if not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env_file()
 
 
 def parse_frontend_origins() -> list[str]:
@@ -45,3 +66,21 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.get("/health/db")
+def healthcheck_database() -> dict[str, str]:
+    try:
+        ping_database()
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(error),
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Banco PostgreSQL indisponivel.",
+        ) from error
+
+    return {"status": "healthy", "database": "postgresql"}
