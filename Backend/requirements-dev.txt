@@ -1,2 +1,4 @@
+# Reaproveita dependencias principais da API.
 -r requirements.txt
+# Dependencia de testes unitarios.
 pytest==8.3.5
