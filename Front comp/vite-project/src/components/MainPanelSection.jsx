@@ -12,6 +12,9 @@ import {
 import { CheckCircle, Paperclip, Upload, XCircle } from "react-bootstrap-icons";
 import { agentRules, legalBranches } from "../data/mockData";
 
+/**
+ * Formata tamanho do arquivo para exibicao amigavel ao usuario.
+ */
 function fileSizeLabel(file) {
   if (!file) return "";
   const size = file.size / 1024;
@@ -19,6 +22,9 @@ function fileSizeLabel(file) {
   return `${(size / 1024).toFixed(2)} MB`;
 }
 
+/**
+ * Painel principal de entrada do caso, upload e edicao ao vivo da defesa.
+ */
 export default function MainPanelSection({
   form,
   completion,

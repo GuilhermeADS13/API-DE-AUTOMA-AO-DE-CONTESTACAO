@@ -8,152 +8,32 @@ import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
 import DashboardSection from "./components/DashboardSection";
 import AppFooter from "./components/AppFooter";
+import {
+  AGENT_API_URL,
+  AUTH_LOGIN_API_URL,
+  AUTH_LOGOUT_API_URL,
+  AUTH_SESSION_API_URL,
+  AUTH_SIGNUP_API_URL,
+} from "./config/api";
 import { historyItems } from "./data/mockData";
-
-const DRAFT_STORAGE_KEY = "jurisflow:draft:v2";
-const AUTH_SESSION_STORAGE_KEY = "jurisflow:auth:session:v1";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-const AGENT_API_URL = import.meta.env.VITE_IA_ENDPOINT || `${API_BASE_URL}/gerar-contestacao`;
-const AUTH_SIGNUP_API_URL = `${API_BASE_URL}/usuarios/cadastro`;
-const AUTH_LOGIN_API_URL = `${API_BASE_URL}/usuarios/login`;
-const AUTH_LOGOUT_API_URL = `${API_BASE_URL}/usuarios/logout`;
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"];
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_MAX_LENGTH = 12;
-
-function normalizeFileName(value) {
-  return (value || "defesa")
-    .toLowerCase()
-    .replace(/[^\w-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function generateCaseId(currentHistory) {
-  const year = new Date().getFullYear();
-  const existing = currentHistory
-    .map((item) => Number(item.id.split("-")[2]))
-    .filter((value) => Number.isFinite(value));
-  const next = (existing.length ? Math.max(...existing) : 0) + 1;
-  return `CTR-${year}-${String(next).padStart(3, "0")}`;
-}
-
-function readDraftFromStorage() {
-  if (typeof window === "undefined") {
-    return { form: null, info: "" };
-  }
-
-  try {
-    const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!saved) return { form: null, info: "" };
-
-    const parsed = JSON.parse(saved);
-    return {
-      form: parsed.form || null,
-      info: parsed.savedAt ? `Rascunho recuperado: ${parsed.savedAt}` : "",
-    };
-  } catch {
-    return {
-      form: null,
-      info: "Nao foi possivel recuperar o rascunho salvo.",
-    };
-  }
-}
-
-function readStoredSession() {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const saved = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
-    if (!saved) return null;
-    return JSON.parse(saved);
-  } catch {
-    return null;
-  }
-}
-
-function persistSession(session) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
-}
-
-function clearSession() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
-}
-
-function normalizeEmail(value) {
-  return (value || "").trim().toLowerCase();
-}
-
-function isValidEmail(value) {
-  return EMAIL_REGEX.test(normalizeEmail(value));
-}
-
-async function getApiErrorMessage(response, fallbackMessage) {
-  try {
-    const data = await response.json();
-    if (typeof data?.detail === "string" && data.detail.trim()) {
-      return data.detail;
-    }
-    if (typeof data?.message === "string" && data.message.trim()) {
-      return data.message;
-    }
-  } catch {
-    // Ignore parse errors and keep fallback message.
-  }
-
-  return fallbackMessage;
-}
-
-function getPasswordChecks(value) {
-  const password = value || "";
-  return {
-    minLength: password.length >= PASSWORD_MIN_LENGTH,
-    hasUppercase: /[A-Z]/.test(password),
-    hasLowercase: /[a-z]/.test(password),
-    hasNumber: /\d/.test(password),
-    hasSymbol: /[^A-Za-z0-9]/.test(password),
-    maxLength: password.length <= PASSWORD_MAX_LENGTH,
-  };
-}
-
-function validateAuthField(name, value, mode) {
-  const fieldValue = value || "";
-
-  if (name === "name") {
-    if (mode !== "signup") return "";
-    if (!fieldValue.trim()) return "Informe o nome para criar a conta.";
-    if (fieldValue.trim().length < 3) return "Use pelo menos 3 caracteres no nome.";
-    return "";
-  }
-
-  if (name === "email") {
-    if (!fieldValue.trim()) return "Informe o e-mail.";
-    if (!isValidEmail(fieldValue)) return "Informe um e-mail valido.";
-    return "";
-  }
-
-  if (name === "password") {
-    if (!fieldValue.trim()) return "Informe a senha.";
-    if (fieldValue.length > PASSWORD_MAX_LENGTH) {
-      return `A senha deve ter no maximo ${PASSWORD_MAX_LENGTH} caracteres.`;
-    }
-
-    if (mode === "signup") {
-      const checks = getPasswordChecks(fieldValue);
-      if (!checks.minLength || !checks.hasUppercase || !checks.hasLowercase || !checks.hasNumber || !checks.hasSymbol) {
-        return "A senha deve ter 8+ caracteres, com maiuscula, minuscula, numero e simbolo.";
-      }
-    }
-
-    return "";
-  }
-
-  return "";
-}
+import { generateCaseId } from "./utils/cases";
+import { normalizeFileName, readFileAsBase64, validateFile } from "./utils/files";
+import { escapeHtml } from "./utils/html";
+import {
+  clearSession,
+  persistDraft,
+  persistSession,
+  readDraftFromStorage,
+  readStoredSession,
+} from "./utils/storage";
+import {
+  getApiErrorMessage,
+  getPasswordChecks,
+  isValidEmail,
+  isValidNumeroProcesso,
+  normalizeEmail,
+  validateAuthField,
+} from "./utils/validators";
 
 function readValidSession() {
   const session = readStoredSession();
@@ -168,19 +48,22 @@ function readValidSession() {
     id: session.id || "",
     name: session.name || "Conta",
     email: normalizedEmail,
-    token: session.token || "",
   };
 }
 
 export default function App() {
+  // `draftSeed`: snapshot inicial do rascunho recuperado do navegador.
   const [draftSeed] = useState(readDraftFromStorage);
+  // `currentPage`: controla navegacao entre Inicio, Painel e Dashboard.
   const [currentPage, setCurrentPage] = useState("inicio");
 
+  // Estados de UI global (modais, loading e ultimo caso gerado).
   const [showResultModal, setShowResultModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastCaseId, setLastCaseId] = useState(null);
+  // `authUser`: perfil autenticado em memoria + storage local seguro (sem token).
   const [authUser, setAuthUser] = useState(readValidSession);
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({
@@ -203,6 +86,7 @@ export default function App() {
   }));
 
   const [history, setHistory] = useState(() => [...historyItems]);
+  // `uploadedFile`: arquivo base selecionado pelo usuario para envio ao backend.
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const [formErrors, setFormErrors] = useState({});
@@ -253,6 +137,48 @@ export default function App() {
       setLiveDraft(generatedDraftText);
     }
   }, [generatedDraftText, liveDraftTouched]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const syncSession = async () => {
+      try {
+        const response = await fetch(AUTH_SESSION_API_URL, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            clearSession();
+            setAuthUser(null);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        const usuario = data?.usuario || {};
+        const session = {
+          id: usuario.id || "",
+          name: usuario.nome || "Conta",
+          email: normalizeEmail(usuario.email || ""),
+        };
+        if (!session.email) return;
+
+        persistSession(session);
+        setAuthUser(session);
+      } catch {
+        // Mantem sessao local quando backend nao estiver acessivel.
+      }
+    };
+
+    syncSession();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -357,6 +283,7 @@ export default function App() {
   };
 
   const handleAuthSubmit = async (event) => {
+    // Faz cadastro/login e recebe cookie HTTPOnly de sessao via backend.
     event.preventDefault();
     if (authLoading) return;
 
@@ -384,6 +311,7 @@ export default function App() {
       if (authMode === "signup") {
         const response = await fetch(AUTH_SIGNUP_API_URL, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -417,7 +345,6 @@ export default function App() {
           id: usuario.id || "",
           name: usuario.nome || authForm.name.trim(),
           email: normalizeEmail(usuario.email || authForm.email),
-          token: data?.token || "",
         };
 
         persistSession(session);
@@ -432,6 +359,7 @@ export default function App() {
 
       const response = await fetch(AUTH_LOGIN_API_URL, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -467,7 +395,6 @@ export default function App() {
         id: usuario.id || "",
         name: usuario.nome || "Conta",
         email: normalizeEmail(usuario.email || authForm.email),
-        token: data?.token || "",
       };
 
       persistSession(session);
@@ -491,20 +418,13 @@ export default function App() {
     let remoteLogoutFailed = false;
 
     try {
-      if (authUser?.token) {
-        const response = await fetch(AUTH_LOGOUT_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: authUser.token,
-          }),
-        });
+      const response = await fetch(AUTH_LOGOUT_API_URL, {
+        method: "POST",
+        credentials: "include",
+      });
 
-        if (!response.ok) {
-          remoteLogoutFailed = true;
-        }
+      if (!response.ok) {
+        remoteLogoutFailed = true;
       }
     } catch {
       remoteLogoutFailed = true;
@@ -518,20 +438,6 @@ export default function App() {
         ? "Sessao local encerrada, mas nao foi possivel confirmar logout no servidor."
         : "Sessao encerrada com sucesso.",
     });
-  };
-
-  const validateFile = (file) => {
-    if (!file) return "Selecione um arquivo DOCX, DOC ou PDF.";
-
-    const extension = file.name.split(".").pop()?.toLowerCase() || "";
-    if (!ALLOWED_EXTENSIONS.includes(extension)) {
-      return "Formato invalido. Envie apenas DOCX, DOC ou PDF.";
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      return "Arquivo acima de 10 MB. Reduza o tamanho e tente novamente.";
-    }
-
-    return "";
   };
 
   const handleFileSelect = (file) => {
@@ -560,6 +466,9 @@ export default function App() {
     const errors = {};
 
     if (!form.processo.trim()) errors.processo = "Informe o numero do processo.";
+    if (form.processo.trim() && !isValidNumeroProcesso(form.processo)) {
+      errors.processo = "Use o formato 0001234-56.2026.8.00.0000.";
+    }
     if (!form.cliente.trim()) errors.cliente = "Informe o cliente ou parte.";
     if (!form.tipoAcao.trim()) errors.tipoAcao = "Selecione o ramo do direito.";
     if (!form.tese.trim()) errors.tese = "Informe a tese principal.";
@@ -578,7 +487,7 @@ export default function App() {
     };
 
     try {
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      persistDraft(payload);
       setDraftInfo(`Ultimo rascunho salvo em ${savedAt}`);
       setFeedback({
         variant: "success",
@@ -593,7 +502,18 @@ export default function App() {
   };
 
   const handleSubmit = async (event) => {
+    // Valida formulario, serializa arquivo em base64 e envia payload completo ao backend.
     event.preventDefault();
+
+    if (!authUser) {
+      setFeedback({
+        variant: "warning",
+        text: "Faca login para enviar casos ao backend.",
+      });
+      openAuthModal("login");
+      return;
+    }
+
     const errors = validateForm();
 
     if (Object.keys(errors).length) {
@@ -625,20 +545,26 @@ export default function App() {
       ...prev,
     ]);
 
-    const payload = {
-      numero_processo: form.processo.trim(),
-      autor: form.cliente.trim(),
-      reu: "Nao informado",
-      tipo_acao: form.tipoAcao.trim(),
-      fatos: form.observacoes.trim(),
-      pedido_autor: form.tese.trim(),
-      arquivo_base: uploadedFile?.name || "",
-      texto_editado_ao_vivo: (liveDraft.trim() || generatedDraftText).trim(),
-    };
-
     try {
+      const arquivoConteudoBase64 = await readFileAsBase64(uploadedFile);
+      const payload = {
+        numero_processo: form.processo.trim(),
+        autor: form.cliente.trim(),
+        reu: "Nao informado",
+        tipo_acao: form.tipoAcao.trim(),
+        fatos: form.observacoes.trim(),
+        pedido_autor: form.tese.trim(),
+        arquivo_base: uploadedFile?.name || "",
+        arquivo_base_nome: uploadedFile?.name || "",
+        arquivo_base_mime_type: uploadedFile?.type || "application/octet-stream",
+        arquivo_base_tamanho_bytes: uploadedFile?.size || 0,
+        arquivo_base_conteudo_base64: arquivoConteudoBase64,
+        texto_editado_ao_vivo: (liveDraft.trim() || generatedDraftText).trim(),
+      };
+
       const response = await fetch(AGENT_API_URL, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -646,10 +572,20 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Falha HTTP ${response.status}`);
+        const errorMessage = await getApiErrorMessage(
+          response,
+          `Falha HTTP ${response.status}.`,
+        );
+
+        if (response.status === 401) {
+          clearSession();
+          setAuthUser(null);
+          openAuthModal("login");
+        }
+        throw new Error(errorMessage);
       }
 
+      await response.json().catch(() => ({}));
       setLoading(false);
       setSubmitted(true);
       setShowResultModal(true);
@@ -666,7 +602,7 @@ export default function App() {
         text: "Caso enviado ao agente de IA com sucesso. Defesa pronta para revisao.",
       });
       setCurrentPage("dashboard");
-    } catch {
+    } catch (error) {
       setLoading(false);
       setAutomationStatus({ webhook: 42, ia: 0, validacao: 0 });
       setHistory((prev) =>
@@ -678,7 +614,10 @@ export default function App() {
       );
       setFeedback({
         variant: "danger",
-        text: "Nao foi possivel enviar para o agente de IA. Verifique se o backend esta ativo em http://localhost:8000.",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel enviar para o agente de IA. Verifique backend e autenticacao.",
       });
     }
   };
@@ -728,10 +667,12 @@ export default function App() {
       return;
     }
 
+    const safeProcesso = escapeHtml(form.processo || "");
+    const safeDraft = escapeHtml(liveDraft.trim() || generatedDraftText).replace(/\n/g, "<br/>");
     const printable = `
       <html>
         <head>
-          <title>Defesa ${form.processo || ""}</title>
+          <title>Defesa ${safeProcesso}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 32px; line-height: 1.6; color: #222; }
             h1 { font-size: 18px; margin-bottom: 16px; }
@@ -740,7 +681,7 @@ export default function App() {
         </head>
         <body>
           <h1>Defesa - Minuta</h1>
-          <p>${(liveDraft.trim() || generatedDraftText).replace(/\n/g, "<br/>")}</p>
+          <p>${safeDraft}</p>
         </body>
       </html>
     `;

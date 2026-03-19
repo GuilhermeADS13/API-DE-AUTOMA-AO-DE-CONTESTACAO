@@ -1,6 +1,9 @@
 import React from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 
+/**
+ * Modal de autenticacao (login/cadastro) com validacao visual em tempo real.
+ */
 export default function AuthModal({
   show,
   mode,

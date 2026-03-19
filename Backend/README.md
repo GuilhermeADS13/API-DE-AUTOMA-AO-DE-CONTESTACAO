@@ -12,6 +12,7 @@ API FastAPI do projeto de automacao de contestacao com integracao n8n e persiste
 1. Copie `.env.example` para `.env`.
 2. Ajuste `N8N_WEBHOOK_URL` e `FRONTEND_ORIGINS`.
 3. Configure a conexao PostgreSQL.
+4. Configure opcoes de sessao (`SESSION_TTL_HOURS`, `SESSION_COOKIE_*`) quando necessario.
 
 Opcao 1 (recomendada): `DATABASE_URL`
 
@@ -29,6 +30,10 @@ DATABASE_USER=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_SSLMODE=prefer
 DATABASE_CONNECT_TIMEOUT=5
+SESSION_TTL_HOURS=12
+SESSION_COOKIE_NAME=contestacao_session
+SESSION_COOKIE_SAMESITE=lax
+SESSION_COOKIE_SECURE=false
 ```
 
 ## Executar localmente
@@ -57,3 +62,18 @@ Com o backend em execucao:
 - `POST /api/usuarios/cadastro` - cria conta de usuario com validacao de email/senha
 - `POST /api/usuarios/login` - autentica usuario por email/senha
 - `POST /api/usuarios/logout` - invalida token de sessao no servidor
+- `GET /api/usuarios/sessao` - valida sessao atual via cookie/Authorization
+
+## Seguranca e sessao
+
+- O backend agora aceita sessao por cookie HTTPOnly e por header `Authorization: Bearer <token>`.
+- O endpoint `POST /api/gerar-contestacao` exige autenticacao.
+- CORS esta com `allow_credentials=True`, entao o frontend deve usar `credentials: "include"`.
+
+## Testes
+
+```bash
+cd Backend
+pip install -r requirements-dev.txt
+pytest
+```

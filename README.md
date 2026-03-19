@@ -36,5 +36,7 @@ Use `Backend/.env.example` como referencia:
 ## Observacoes
 
 - O endpoint principal de automacao esta em `POST /api/gerar-contestacao`.
-- Cadastro/login/logout estao em `POST /api/usuarios/cadastro`, `POST /api/usuarios/login` e `POST /api/usuarios/logout`.
+- Cadastro/login/logout estao em `POST /api/usuarios/cadastro`, `POST /api/usuarios/login`, `POST /api/usuarios/logout` e validacao em `GET /api/usuarios/sessao`.
 - O backend cria automaticamente a tabela `contestacoes` no PostgreSQL na primeira execucao.
+- O envio de contestacao agora exige autenticacao.
+- O frontend usa `credentials: include` para sessao por cookie HTTPOnly.

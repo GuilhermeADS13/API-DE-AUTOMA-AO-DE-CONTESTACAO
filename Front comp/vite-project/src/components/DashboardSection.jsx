@@ -3,13 +3,16 @@ import { Badge, Card, Col, Container, ProgressBar, Row, Table } from "react-boot
 import { dashboardCards } from "../data/mockData";
 import StatusBadge from "./ui/StatusBadge";
 
+/**
+ * Dashboard com cards de indicadores, barras de status e historico de casos.
+ */
 export default function DashboardSection({ history, automationStatus }) {
   return (
     <section id="dashboard" className="py-5">
       <Container>
         <div className="dashboard-simple-header mb-4">
           <Badge className="section-badge mb-2">Dashboard</Badge>
-          <h2 className="fw-bold mb-1">Dashboard informativo para os advocados </h2>
+          <h2 className="fw-bold mb-1">Dashboard informativo para os advogados</h2>
           <p className="text-secondary mb-0">
             Veja o status da automacao e o historico das defesas em uma unica tela.
           </p>

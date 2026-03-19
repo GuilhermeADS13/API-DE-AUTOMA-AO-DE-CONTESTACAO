@@ -1,15 +1,20 @@
+"""Schemas Pydantic relacionados ao ciclo de usuario/autenticacao."""
+
 import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Regex basica de e-mail utilizada em cadastro/login.
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", re.IGNORECASE)
 
 
 def normalizar_email(email: str) -> str:
+    """Remove espacos e padroniza e-mail em minusculas."""
     return email.strip().lower()
 
 
 def senha_forte(senha: str) -> bool:
+    """Aplica politica de senha forte usada no backend."""
     if any(char.isspace() for char in senha):
         return False
     if not any(char.isupper() for char in senha):
@@ -24,6 +29,8 @@ def senha_forte(senha: str) -> bool:
 
 
 class Usuario(BaseModel):
+    """Modelo completo de usuario (inclui id e senha)."""
+
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     id: str = Field(..., min_length=1, max_length=64)
@@ -67,6 +74,8 @@ class Usuario(BaseModel):
 
 
 class UsuarioCadastro(BaseModel):
+    """Payload aceito no endpoint de criacao de conta."""
+
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     nome: str = Field(..., min_length=3, max_length=120, alias="name")
@@ -101,6 +110,8 @@ class UsuarioCadastro(BaseModel):
 
 
 class UsuarioLogin(BaseModel):
+    """Payload aceito no endpoint de login."""
+
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     email: str = Field(..., min_length=6, max_length=254)
@@ -124,11 +135,15 @@ class UsuarioLogin(BaseModel):
 
 
 class UsuarioLogout(BaseModel):
-    token: str = Field(..., min_length=8, max_length=256)
+    """Payload opcional para logout (cookie e usado como fallback principal)."""
+
+    token: str | None = Field(default=None, min_length=8, max_length=256)
 
     @field_validator("token")
     @classmethod
-    def validar_token(cls, value: str) -> str:
+    def validar_token(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         token = value.strip()
         if not token:
             raise ValueError("Token de sessao invalido.")

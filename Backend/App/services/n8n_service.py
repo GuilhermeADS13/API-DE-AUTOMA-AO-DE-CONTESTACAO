@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from typing import Any
@@ -17,7 +18,8 @@ def get_n8n_webhook_url() -> str:
     return webhook_url or DEFAULT_N8N_WEBHOOK_URL
 
 
-def enviar_para_n8n(dados: dict[str, Any]) -> Any:
+def _enviar_para_n8n_sync(dados: dict[str, Any]) -> Any:
+    """Execucao sincrona do POST para n8n (usada em thread dedicada)."""
     webhook_url = get_n8n_webhook_url()
     body = json.dumps(dados).encode("utf-8")
     request = Request(
@@ -42,3 +44,8 @@ def enviar_para_n8n(dados: dict[str, Any]) -> Any:
         return json.loads(response_body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return {"raw_response": response_body.decode("utf-8", errors="replace")}
+
+
+async def enviar_para_n8n(dados: dict[str, Any]) -> Any:
+    """Envia payload sem bloquear o loop principal da API."""
+    return await asyncio.to_thread(_enviar_para_n8n_sync, dados)

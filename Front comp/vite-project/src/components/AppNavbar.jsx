@@ -1,6 +1,9 @@
 import React from "react";
 import { Button, Container, Nav, Navbar } from "react-bootstrap";
 
+/**
+ * Gera iniciais para o avatar textual no menu superior.
+ */
 function initialsFromName(name) {
   return (name || "JF")
     .split(" ")
@@ -10,6 +13,9 @@ function initialsFromName(name) {
     .join("");
 }
 
+/**
+ * Barra de navegacao principal com estado de autenticacao.
+ */
 export default function AppNavbar({
   currentPage,
   onNavigate,

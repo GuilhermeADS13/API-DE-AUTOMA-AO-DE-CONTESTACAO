@@ -1,3 +1,5 @@
+
+// Dados mockados para cards, selects e historico da interface.
 export const stats = [
   {
     label: "Tempo medio por defesa",
@@ -21,6 +23,7 @@ export const stats = [
   },
 ];
 
+// Lista de ramos juridicos exibida no select do formulario.
 export const legalBranches = [
   "Direito Civil",
   "Direito do Consumidor",
@@ -43,6 +46,7 @@ export const legalBranches = [
   "Direito Maritimo e Aeronautico",
 ];
 
+// Historico inicial apresentado no dashboard.
 export const historyItems = [
   {
     id: "CTR-2026-001",
@@ -67,6 +71,7 @@ export const historyItems = [
   },
 ];
 
+// Regras de uso exibidas ao lado do editor da defesa.
 export const agentRules = [
   "Nao alterar dados processuais sensiveis.",
   "Nao inventar jurisprudencia nem citacoes.",
@@ -74,6 +79,7 @@ export const agentRules = [
   "Atuar apenas na edicao da peca base.",
 ];
 
+// Cards de resumo no topo da tela de dashboard.
 export const dashboardCards = [
   { label: "Casos em processamento", value: "07" },
   { label: "Aguardando advogado", value: "14" },

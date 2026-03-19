@@ -44,7 +44,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=parse_frontend_origins(),
-    allow_credentials=False,
+    # Necessario para trafegar cookie HTTPOnly de sessao entre front e backend.
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

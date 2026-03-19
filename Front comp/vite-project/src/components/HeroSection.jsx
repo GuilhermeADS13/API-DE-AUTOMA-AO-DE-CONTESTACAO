@@ -10,6 +10,9 @@ import {
   ShieldCheck,
 } from "react-bootstrap-icons";
 
+/**
+ * Secao inicial de apresentacao do produto e atalhos para as telas principais.
+ */
 export default function HeroSection({ onNavigate }) {
   return (
     <section id="inicio" className="hero-section py-5">

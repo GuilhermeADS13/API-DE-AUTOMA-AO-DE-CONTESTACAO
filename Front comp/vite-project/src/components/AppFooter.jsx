@@ -1,6 +1,9 @@
 import React from "react";
 import { Container } from "react-bootstrap";
 
+/**
+ * Rodape institucional com resumo do produto e direcionamento de uso.
+ */
 export default function AppFooter() {
   return (
     <footer className="app-footer pt-5 pb-4">

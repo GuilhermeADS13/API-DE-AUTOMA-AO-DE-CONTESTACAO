@@ -1,6 +1,9 @@
 import React from "react";
 import { Badge } from "react-bootstrap";
 
+/**
+ * Badge visual para status do caso no dashboard.
+ */
 export default function StatusBadge({ status }) {
   const normalized = status.toLowerCase();
 

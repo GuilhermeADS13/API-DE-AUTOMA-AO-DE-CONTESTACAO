@@ -1,14 +1,18 @@
+"""Funcoes utilitarias para hash e verificacao de senha."""
+
 import base64
 import hashlib
 import hmac
 import os
 
+# Parametros do PBKDF2 para proteger senhas em repouso no banco.
 PBKDF2_ALGORITHM = "sha256"
 PBKDF2_ITERATIONS = 120_000
 SALT_BYTES = 16
 
 
 def hash_password(password: str) -> str:
+    """Gera hash PBKDF2 com salt aleatorio e serializa em string."""
     salt = os.urandom(SALT_BYTES)
     digest = hashlib.pbkdf2_hmac(
         PBKDF2_ALGORITHM,
@@ -22,6 +26,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
+    """Compara senha informada com hash persistido usando tempo constante."""
     try:
         algorithm, iterations_str, encoded_salt, encoded_digest = stored_hash.split("$", 3)
         if algorithm != f"pbkdf2_{PBKDF2_ALGORITHM}":

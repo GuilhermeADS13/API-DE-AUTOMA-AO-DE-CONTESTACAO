@@ -2,6 +2,9 @@ import React from "react";
 import { Card, Col, Container, Row } from "react-bootstrap";
 import { stats } from "../data/mockData";
 
+/**
+ * Exibe metricas de alto nivel da operacao em formato de cards.
+ */
 export default function StatsSection() {
   return (
     <section className="stats-band pb-4">

@@ -1,16 +1,35 @@
-# React + Vite
+# Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface do sistema de automacao de contestacao.
 
-Currently, two official plugins are available:
+## Rodar localmente
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+cd "Front comp/vite-project"
+npm install
+npm run dev
+```
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `npm run dev` - ambiente de desenvolvimento
+- `npm run build` - build de producao
+- `npm run preview` - preview local do build
+- `npm run lint` - validacao eslint
+- `npm run test` - executa testes unitarios (Vitest)
+- `npm run test:watch` - modo watch de testes
 
-## Expanding the ESLint configuration
+## Variaveis de ambiente
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Crie um `.env` (ou `.env.local`) em `vite-project` quando precisar sobrescrever:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_IA_ENDPOINT=http://localhost:8000/api/gerar-contestacao
+```
+
+## Notas de arquitetura
+
+- Sessao usa cookie HTTPOnly no backend (`credentials: include`) e guarda apenas perfil em `localStorage`.
+- Envio do caso inclui metadados + conteudo base64 do arquivo base.
+- Validacao de numero de processo no front segue regex CNJ do backend.

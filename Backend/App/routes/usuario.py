@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from App.database import (
     DatabaseIntegrityError,
@@ -10,13 +10,19 @@ from App.database import (
     revoke_sessao,
 )
 from App.models.usuario import UsuarioCadastro, UsuarioLogin, UsuarioLogout
+from App.security import (
+    apply_session_cookie,
+    clear_session_cookie,
+    extract_session_token,
+    get_authenticated_user,
+)
 from App.services.auth_service import hash_password, verify_password
 
 router = APIRouter()
 
 
 @router.post("/usuarios/cadastro", status_code=status.HTTP_201_CREATED)
-async def cadastrar_usuario(payload: UsuarioCadastro) -> dict:
+async def cadastrar_usuario(payload: UsuarioCadastro, response: Response) -> dict:
     existente = get_usuario_por_email(payload.email)
     if existente:
         raise HTTPException(
@@ -41,6 +47,7 @@ async def cadastrar_usuario(payload: UsuarioCadastro) -> dict:
         ) from error
 
     token = create_sessao_usuario(usuario["id"])
+    apply_session_cookie(response, token)
 
     return {
         "status": "sucesso",
@@ -50,7 +57,7 @@ async def cadastrar_usuario(payload: UsuarioCadastro) -> dict:
 
 
 @router.post("/usuarios/login")
-async def login_usuario(payload: UsuarioLogin) -> dict:
+async def login_usuario(payload: UsuarioLogin, response: Response) -> dict:
     usuario = get_usuario_por_email(payload.email)
     if not usuario:
         raise HTTPException(
@@ -66,6 +73,7 @@ async def login_usuario(payload: UsuarioLogin) -> dict:
         )
 
     token = create_sessao_usuario(usuario["id"])
+    apply_session_cookie(response, token)
 
     return {
         "status": "sucesso",
@@ -79,6 +87,30 @@ async def login_usuario(payload: UsuarioLogin) -> dict:
 
 
 @router.post("/usuarios/logout")
-async def logout_usuario(payload: UsuarioLogout) -> dict:
-    revoke_sessao(payload.token)
+async def logout_usuario(
+    request: Request,
+    response: Response,
+    payload: UsuarioLogout | None = None,
+) -> dict:
+    header_token = extract_session_token(request, request.headers.get("authorization"))
+    token = (payload.token if payload else None) or header_token
+
+    if token:
+        revoke_sessao(token)
+
+    clear_session_cookie(response)
+
     return {"status": "sucesso", "message": "Sessao encerrada."}
+
+
+@router.get("/usuarios/sessao")
+async def obter_sessao(usuario: dict[str, str] = Depends(get_authenticated_user)) -> dict:
+    """Retorna dados basicos da sessao autenticada."""
+    return {
+        "status": "sucesso",
+        "usuario": {
+            "id": usuario["id"],
+            "nome": usuario["nome"],
+            "email": usuario["email"],
+        },
+    }
