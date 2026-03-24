@@ -9,6 +9,7 @@ Este guia descreve o que cada parte principal faz e aponta melhorias futuras.
 - `AGENT_API_URL`: endpoint de envio da contestacao.
 - `AUTH_SIGNUP_API_URL`, `AUTH_LOGIN_API_URL`, `AUTH_LOGOUT_API_URL`: endpoints de autenticacao.
 - `AUTH_SESSION_API_URL`: endpoint para validar sessao ativa.
+- `SUPPORT_CONTACT_API_URL`: endpoint de envio da reclamacao para suporte.
 
 Melhorias futuras:
 - Adicionar ambientes `staging` e `production` com `.env`.
@@ -117,6 +118,14 @@ Melhorias futuras:
 Melhorias futuras:
 - Retry exponencial e circuit breaker.
 
+### `Backend/App/services/suporte_email_service.py`
+- `enviar_reclamacao_por_email(payload)`: encaminha reclamacao para o e-mail de suporte via SMTP.
+- `SupportEmailConfigError`: erro de configuracao SMTP.
+- `SupportEmailServiceError`: erro de envio SMTP.
+
+Melhorias futuras:
+- Suportar fallback com fila e retry para indisponibilidade temporaria de SMTP.
+
 ### `Backend/App/models/processo.py`
 - `PROCESSO_REGEX`: formato CNJ.
 - `ALLOWED_BASE_FILE_EXTENSIONS`: extensoes aceitas.
@@ -144,6 +153,9 @@ Melhorias futuras:
 - `login_usuario(...)`: autentica e cria sessao.
 - `logout_usuario(...)`: revoga sessao + remove cookie.
 - `obter_sessao(...)`: valida sessao atual.
+
+### `Backend/App/routes/suporte.py`
+- `enviar_contato(...)`: recebe reclamacao, gera protocolo e envia para e-mail de suporte.
 
 Melhorias futuras:
 - Limite de tentativas de login e auditoria.

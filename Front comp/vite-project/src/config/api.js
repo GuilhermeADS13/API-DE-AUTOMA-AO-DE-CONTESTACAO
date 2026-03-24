@@ -8,3 +8,5 @@ export const AUTH_SIGNUP_API_URL = `${API_BASE_URL}/usuarios/cadastro`;
 export const AUTH_LOGIN_API_URL = `${API_BASE_URL}/usuarios/login`;
 export const AUTH_LOGOUT_API_URL = `${API_BASE_URL}/usuarios/logout`;
 export const AUTH_SESSION_API_URL = `${API_BASE_URL}/usuarios/sessao`;
+export const SUPPORT_CONTACT_API_URL =
+  import.meta.env.VITE_SUPPORT_CONTACT_ENDPOINT || `${API_BASE_URL}/suporte/contato`;

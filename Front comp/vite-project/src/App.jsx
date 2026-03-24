@@ -7,6 +7,7 @@ import HeroSection from "./components/HeroSection";
 import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
 import DashboardSection from "./components/DashboardSection";
+import SupportSection from "./components/SupportSection";
 import AppFooter from "./components/AppFooter";
 import {
   AGENT_API_URL,
@@ -14,6 +15,7 @@ import {
   AUTH_LOGOUT_API_URL,
   AUTH_SESSION_API_URL,
   AUTH_SIGNUP_API_URL,
+  SUPPORT_CONTACT_API_URL,
 } from "./config/api";
 import { historyItems } from "./data/mockData";
 import { generateCaseId } from "./utils/cases";
@@ -54,7 +56,7 @@ function readValidSession() {
 export default function App() {
   // `draftSeed`: snapshot inicial do rascunho recuperado do navegador.
   const [draftSeed] = useState(readDraftFromStorage);
-  // `currentPage`: controla navegacao entre Inicio, Painel e Dashboard.
+  // `currentPage`: controla navegacao entre Inicio, Painel, Dashboard e Suporte.
   const [currentPage, setCurrentPage] = useState("inicio");
 
   // Estados de UI global (modais, loading e ultimo caso gerado).
@@ -100,6 +102,17 @@ export default function App() {
 
   const [liveDraft, setLiveDraft] = useState("");
   const [liveDraftTouched, setLiveDraftTouched] = useState(false);
+  const [supportForm, setSupportForm] = useState(() => ({
+    nome: authUser?.name || "",
+    email: authUser?.email || "",
+    categoria: "",
+    processo: "",
+    assunto: "",
+    mensagem: "",
+  }));
+  const [supportErrors, setSupportErrors] = useState({});
+  const [supportFeedback, setSupportFeedback] = useState(null);
+  const [supportLoading, setSupportLoading] = useState(false);
 
   const completion = useMemo(() => {
     const fields = [...Object.values(form), uploadedFile ? "arquivo" : ""];
@@ -137,6 +150,14 @@ export default function App() {
       setLiveDraft(generatedDraftText);
     }
   }, [generatedDraftText, liveDraftTouched]);
+
+  useEffect(() => {
+    setSupportForm((prev) => ({
+      ...prev,
+      nome: prev.nome || authUser?.name || "",
+      email: prev.email || authUser?.email || "",
+    }));
+  }, [authUser]);
 
   useEffect(() => {
     let isActive = true;
@@ -501,6 +522,126 @@ export default function App() {
     }
   };
 
+  const handleSupportChange = (event) => {
+    const { name, value } = event.target;
+    setSupportForm((prev) => ({ ...prev, [name]: value }));
+    setSupportErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const validateSupportForm = () => {
+    const errors = {};
+
+    if (!supportForm.nome.trim()) {
+      errors.nome = "Informe seu nome.";
+    } else if (supportForm.nome.trim().length < 3) {
+      errors.nome = "Use pelo menos 3 caracteres no nome.";
+    }
+
+    if (!supportForm.email.trim()) {
+      errors.email = "Informe seu e-mail para retorno.";
+    } else if (!isValidEmail(supportForm.email)) {
+      errors.email = "Informe um e-mail valido.";
+    }
+
+    if (!supportForm.categoria.trim()) {
+      errors.categoria = "Selecione a categoria da reclamacao.";
+    }
+
+    if (supportForm.processo.trim() && !isValidNumeroProcesso(supportForm.processo)) {
+      errors.processo = "Use o formato 0001234-56.2026.8.00.0000.";
+    }
+
+    if (!supportForm.assunto.trim()) {
+      errors.assunto = "Informe o assunto da reclamacao.";
+    } else if (supportForm.assunto.trim().length < 4) {
+      errors.assunto = "Use ao menos 4 caracteres no assunto.";
+    }
+
+    if (!supportForm.mensagem.trim()) {
+      errors.mensagem = "Descreva a reclamacao para o suporte.";
+    } else if (supportForm.mensagem.trim().length < 15) {
+      errors.mensagem = "Detalhe mais a reclamacao (minimo de 15 caracteres).";
+    }
+
+    return errors;
+  };
+
+  const handleSupportSubmit = async (event) => {
+    event.preventDefault();
+    if (supportLoading) return;
+
+    const errors = validateSupportForm();
+    if (Object.keys(errors).length) {
+      setSupportErrors(errors);
+      setSupportFeedback({
+        variant: "danger",
+        text: "Revise os campos obrigatorios antes de enviar a reclamacao.",
+      });
+      return;
+    }
+
+    setSupportLoading(true);
+    setSupportFeedback(null);
+
+    const payload = {
+      name: supportForm.nome.trim(),
+      email: normalizeEmail(supportForm.email),
+      category: supportForm.categoria.trim(),
+      processo: supportForm.processo.trim() || null,
+      subject: supportForm.assunto.trim(),
+      message: supportForm.mensagem.trim(),
+    };
+
+    try {
+      const response = await fetch(SUPPORT_CONTACT_API_URL, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorMessage = await getApiErrorMessage(
+          response,
+          "Nao foi possivel enviar a reclamacao para o suporte.",
+        );
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json().catch(() => ({}));
+      setSupportErrors({});
+      setSupportFeedback({
+        variant: "success",
+        text: data?.protocolo
+          ? `Reclamacao recebida com sucesso. Protocolo: ${data.protocolo}.`
+          : "Reclamacao recebida com sucesso pelo time de suporte.",
+      });
+      setSupportForm((prev) => ({
+        ...prev,
+        categoria: "",
+        processo: "",
+        assunto: "",
+        mensagem: "",
+      }));
+    } catch (error) {
+      setSupportFeedback({
+        variant: "danger",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel enviar a reclamacao para o suporte.",
+      });
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
   const handleSubmit = async (event) => {
     // Valida formulario, serializa arquivo em base64 e envia payload completo ao backend.
     event.preventDefault();
@@ -765,6 +906,17 @@ export default function App() {
             </div>
           </section>
         </>
+      )}
+
+      {currentPage === "contato" && (
+        <SupportSection
+          form={supportForm}
+          errors={supportErrors}
+          feedback={supportFeedback}
+          loading={supportLoading}
+          onChange={handleSupportChange}
+          onSubmit={handleSupportSubmit}
+        />
       )}
 
       <AppFooter />

@@ -26,6 +26,7 @@ Crie um `.env` (ou `.env.local`) em `vite-project` quando precisar sobrescrever:
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_IA_ENDPOINT=http://localhost:8000/api/gerar-contestacao
+VITE_SUPPORT_CONTACT_ENDPOINT=http://localhost:8000/api/suporte/contato
 ```
 
 ## Notas de arquitetura

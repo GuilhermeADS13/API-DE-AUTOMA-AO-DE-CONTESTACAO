@@ -28,6 +28,7 @@ export default function AppNavbar({
     { id: "inicio", label: "Inicio" },
     { id: "painel", label: "Formulario IA" },
     { id: "dashboard", label: "Dashboard" },
+    { id: "contato", label: "Suporte" },
   ];
 
   return (

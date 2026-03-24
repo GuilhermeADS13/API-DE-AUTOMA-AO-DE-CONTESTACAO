@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from App.database import init_db, ping_database
-from App.routes import contestacao, usuario
+from App.routes import contestacao, suporte, usuario
 
 
 def load_env_file() -> None:
@@ -52,6 +52,7 @@ app.add_middleware(
 
 app.include_router(contestacao.router, prefix="/api", tags=["Contestacao"])
 app.include_router(usuario.router, prefix="/api", tags=["Usuarios"])
+app.include_router(suporte.router, prefix="/api", tags=["Suporte"])
 
 
 @app.on_event("startup")

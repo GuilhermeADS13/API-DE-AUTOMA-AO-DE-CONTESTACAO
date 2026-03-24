@@ -86,3 +86,27 @@ export const dashboardCards = [
   { label: "Prontas para exportacao", value: "22" },
   { label: "Precisao media do agente", value: "96%" },
 ];
+
+// Opcoes de categoria exibidas no formulario de suporte.
+export const supportIssueTypes = [
+  "Atraso na geracao da defesa",
+  "Erro na minuta sugerida",
+  "Problema de upload de arquivo",
+  "Falha de login ou sessao",
+  "Outro",
+];
+
+// Itens orientativos para o cliente preencher uma reclamacao completa.
+export const supportChecklist = [
+  "Explique o que aconteceu e qual impacto no seu caso.",
+  "Informe o numero do processo quando houver relacao direta.",
+  "Descreva horario aproximado e etapa em que ocorreu a falha.",
+  "Inclua expectativas de retorno para priorizacao adequada.",
+];
+
+// Canais e SLA exibidos na lateral da aba de suporte.
+export const supportChannels = [
+  "Recebimento automatico por e-mail do time de suporte",
+  "Triagem inicial em ate 2 horas uteis",
+  "Atualizacoes por e-mail durante o tratamento",
+];

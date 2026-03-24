@@ -13,6 +13,7 @@ API FastAPI do projeto de automacao de contestacao com integracao n8n e persiste
 2. Ajuste `N8N_WEBHOOK_URL` e `FRONTEND_ORIGINS`.
 3. Configure a conexao PostgreSQL.
 4. Configure opcoes de sessao (`SESSION_TTL_HOURS`, `SESSION_COOKIE_*`) quando necessario.
+5. Configure SMTP do canal de suporte (`SUPPORT_SMTP_*`, `SUPPORT_EMAIL_*`).
 
 Opcao 1 (recomendada): `DATABASE_URL`
 
@@ -34,6 +35,13 @@ SESSION_TTL_HOURS=12
 SESSION_COOKIE_NAME=contestacao_session
 SESSION_COOKIE_SAMESITE=lax
 SESSION_COOKIE_SECURE=false
+SUPPORT_SMTP_HOST=smtp.seuprovedor.com
+SUPPORT_SMTP_PORT=587
+SUPPORT_SMTP_USER=suporte@seudominio.com
+SUPPORT_SMTP_PASSWORD=sua_senha_smtp
+SUPPORT_EMAIL_FROM=suporte@seudominio.com
+SUPPORT_EMAIL_TO=suporte@seudominio.com
+SUPPORT_EMAIL_SUBJECT_PREFIX=[JurisFlow][Suporte]
 ```
 
 ## Executar localmente
@@ -63,6 +71,7 @@ Com o backend em execucao:
 - `POST /api/usuarios/login` - autentica usuario por email/senha
 - `POST /api/usuarios/logout` - invalida token de sessao no servidor
 - `GET /api/usuarios/sessao` - valida sessao atual via cookie/Authorization
+- `POST /api/suporte/contato` - recebe reclamacao e encaminha por e-mail para o suporte
 
 ## Seguranca e sessao
 

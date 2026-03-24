@@ -750,6 +750,42 @@ a {
   animation-delay: 0.2s;
 }
 
+.support-entry-primary {
+  animation: riseUp 0.75s ease both;
+}
+
+.support-entry-secondary {
+  animation: riseUp 0.82s ease 0.12s both;
+}
+
+.support-entry-tertiary {
+  animation: fadeIn 0.55s ease 0.22s both;
+}
+
+.support-intro-copy {
+  max-width: 58ch;
+}
+
+.support-message-area {
+  min-height: 170px;
+  padding-top: 0.95rem;
+}
+
+.support-chip-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.support-chip-item {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(23, 20, 16, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  color: #40362c;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
 .stat-card:hover {
   transform: translateY(-4px);
   border-color: rgba(18, 63, 143, 0.18);
@@ -935,6 +971,7 @@ a {
 }
 
 #painel .progress,
+#contato .progress,
 .status-card .progress {
   height: 10px;
   border-radius: 999px;
@@ -942,19 +979,23 @@ a {
 }
 
 #painel .progress-bar,
+#contato .progress-bar,
 .status-card .progress-bar {
   border-radius: 999px;
   background: linear-gradient(90deg, #181411, var(--accent));
 }
 
-#painel .form-label {
+#painel .form-label,
+#contato .form-label {
   font-weight: 800;
   color: #261f18;
   margin-bottom: 0.45rem;
 }
 
 #painel .form-control,
-#painel .form-select {
+#painel .form-select,
+#contato .form-control,
+#contato .form-select {
   min-height: 52px;
   border-radius: 18px;
   border: 1px solid rgba(23, 20, 16, 0.14);
@@ -962,29 +1003,37 @@ a {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-#painel textarea.form-control {
+#painel textarea.form-control,
+#contato textarea.form-control {
   min-height: 138px;
   padding-top: 0.95rem;
 }
 
 #painel .form-control::placeholder,
-#painel .form-select {
+#painel .form-select,
+#contato .form-control::placeholder,
+#contato .form-select {
   color: #8b8175;
 }
 
 #painel .form-control.is-invalid,
-#painel .form-select.is-invalid {
+#painel .form-select.is-invalid,
+#contato .form-control.is-invalid,
+#contato .form-select.is-invalid {
   border-color: rgba(183, 88, 68, 0.38);
   background: rgba(255, 247, 244, 0.96);
 }
 
 #painel .form-control:focus,
-#painel .form-select:focus {
+#painel .form-select:focus,
+#contato .form-control:focus,
+#contato .form-select:focus {
   border-color: rgba(143, 115, 80, 0.4);
   box-shadow: 0 0 0 0.2rem var(--ring);
 }
 
-#painel .invalid-feedback {
+#painel .invalid-feedback,
+#contato .invalid-feedback {
   margin-top: 0.45rem;
   font-size: 0.84rem;
   color: #b14b3e;
@@ -1886,12 +1935,15 @@ h5 {
 }
 
 #painel .form-label,
+#contato .form-label,
 .auth-modal .form-label {
   color: #f0f3f9;
 }
 
 #painel .form-control,
 #painel .form-select,
+#contato .form-control,
+#contato .form-select,
 .auth-modal .form-control {
   color: #f2f5fb;
   border-color: rgba(255, 255, 255, 0.18);
@@ -1900,12 +1952,16 @@ h5 {
 
 #painel .form-control::placeholder,
 #painel .form-select,
+#contato .form-control::placeholder,
+#contato .form-select,
 .auth-modal .form-control::placeholder {
   color: #98a0ae;
 }
 
 #painel .form-control.is-invalid,
-#painel .form-select.is-invalid {
+#painel .form-select.is-invalid,
+#contato .form-control.is-invalid,
+#contato .form-select.is-invalid {
   border-color: rgba(255, 128, 118, 0.5);
   background: rgba(46, 16, 14, 0.8);
 }
@@ -2136,6 +2192,7 @@ h5 {
 .stats-band,
 #painel,
 #dashboard,
+#contato,
 .app-footer {
   color: var(--uniform-text);
 }
@@ -2215,6 +2272,8 @@ h6,
 
 #painel .form-control,
 #painel .form-select,
+#contato .form-control,
+#contato .form-select,
 .auth-modal .form-control,
 .live-editor-area {
   background: rgba(9, 12, 16, 0.92) !important;
@@ -2224,14 +2283,23 @@ h6,
 
 #painel .form-control::placeholder,
 #painel .form-select,
+#contato .form-control::placeholder,
+#contato .form-select,
 .auth-modal .form-control::placeholder,
 .live-editor-area::placeholder {
   color: #97a1b3 !important;
 }
 
 #painel .form-label,
+#contato .form-label,
 .auth-modal .form-label {
   color: #f0f3fa !important;
+}
+
+.support-chip-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e9edf6;
 }
 
 .dashboard-history-table {

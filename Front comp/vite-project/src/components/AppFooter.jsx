@@ -40,7 +40,7 @@ export default function AppFooter() {
 
         <div className="footer-bottom">
           <span>Plataforma focada em automacao de defesas com clareza operacional</span>
-          <span>Fluxo direto: formulario IA, edicao ao vivo e dashboard simplificado</span>
+          <span>Fluxo direto: formulario IA, dashboard e suporte para reclamacoes</span>
         </div>
       </Container>
     </footer>
