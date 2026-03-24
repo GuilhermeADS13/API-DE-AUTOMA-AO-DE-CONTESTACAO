@@ -73,7 +73,7 @@ export default function MainPanelSection({
       <Container>
         <Row className="g-4">
           <Col lg={7}>
-            <Card className="panel-card border-0 h-100">
+            <Card className="panel-card panel-entry-primary border-0 h-100">
               <Card.Body className="p-4 p-lg-5">
                 <div className="mb-4">
                   <h2 className="h3 mb-2">Formulario para envio ao agente de IA</h2>
@@ -275,7 +275,7 @@ export default function MainPanelSection({
 
           <Col lg={5}>
             <div className="d-grid gap-4 h-100">
-              <Card className="dashboard-card border-0">
+              <Card className="dashboard-card panel-entry-secondary border-0">
                 <Card.Body className="p-4">
                   <h3 className="h5 mb-2">Edicao ao vivo da defesa</h3>
                   <p className="text-secondary small mb-3">
@@ -304,7 +304,7 @@ export default function MainPanelSection({
                 </Card.Body>
               </Card>
 
-              <Card className="side-info-card border-0">
+              <Card className="side-info-card panel-entry-tertiary border-0">
                 <Card.Body className="p-4">
                   <h3 className="h5 mb-3">Regras do agente juridico</h3>
                   <div className="agent-rule-list">

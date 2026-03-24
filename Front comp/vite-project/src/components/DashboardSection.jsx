@@ -10,7 +10,7 @@ export default function DashboardSection({ history, automationStatus }) {
   return (
     <section id="dashboard" className="py-5">
       <Container>
-        <div className="dashboard-simple-header mb-4">
+        <div className="dashboard-simple-header dashboard-entry-header mb-4">
           <Badge className="section-badge mb-2">Dashboard</Badge>
           <h2 className="fw-bold mb-1">Dashboard informativo para os advogados</h2>
           <p className="text-secondary mb-0">
@@ -18,10 +18,10 @@ export default function DashboardSection({ history, automationStatus }) {
           </p>
         </div>
 
-        <Row className="g-3 mb-4">
+        <Row className="g-3 mb-4 dashboard-entry-stats">
           {dashboardCards.map((card) => (
-            <Col md={6} lg={3} key={card.label}>
-              <Card className="dashboard-card border-0 h-100">
+            <Col md={6} lg={3} key={card.label} className="dashboard-entry-stat-col">
+              <Card className="dashboard-card dashboard-entry-stat-card border-0 h-100">
                 <Card.Body className="p-4">
                   <div className="stat-label">{card.label}</div>
                   <div className="stat-value mb-0">{card.value}</div>
@@ -33,7 +33,7 @@ export default function DashboardSection({ history, automationStatus }) {
 
         <Row className="g-4">
           <Col lg={4}>
-            <Card className="dashboard-card border-0 h-100">
+            <Card className="dashboard-card dashboard-entry-main-card border-0 h-100">
               <Card.Body className="p-4">
                 <h3 className="h5 mb-3">Status da automacao</h3>
 
@@ -67,7 +67,7 @@ export default function DashboardSection({ history, automationStatus }) {
           </Col>
 
           <Col lg={8}>
-            <Card className="history-card border-0">
+            <Card className="history-card dashboard-entry-main-card dashboard-entry-history-card border-0">
               <Card.Body className="p-4">
                 <h3 className="h5 mb-3">Historico das defesas</h3>
 

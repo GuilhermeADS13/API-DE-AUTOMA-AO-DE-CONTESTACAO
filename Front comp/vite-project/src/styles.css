@@ -710,6 +710,46 @@ a {
   animation-delay: 0.24s;
 }
 
+.panel-entry-primary {
+  animation: riseUp 0.75s ease both;
+}
+
+.panel-entry-secondary {
+  animation: riseUp 0.82s ease 0.12s both;
+}
+
+.panel-entry-tertiary {
+  animation: fadeIn 0.55s ease 0.22s both;
+}
+
+.dashboard-entry-header {
+  animation: riseUp 0.75s ease both;
+}
+
+.dashboard-entry-stat-card {
+  animation: fadeIn 0.55s ease both;
+}
+
+.dashboard-entry-stats .dashboard-entry-stat-col:nth-child(2) .dashboard-entry-stat-card {
+  animation-delay: 0.08s;
+}
+
+.dashboard-entry-stats .dashboard-entry-stat-col:nth-child(3) .dashboard-entry-stat-card {
+  animation-delay: 0.16s;
+}
+
+.dashboard-entry-stats .dashboard-entry-stat-col:nth-child(4) .dashboard-entry-stat-card {
+  animation-delay: 0.24s;
+}
+
+.dashboard-entry-main-card {
+  animation: riseUp 0.82s ease 0.12s both;
+}
+
+.dashboard-entry-history-card {
+  animation-delay: 0.2s;
+}
+
 .stat-card:hover {
   transform: translateY(-4px);
   border-color: rgba(18, 63, 143, 0.18);
