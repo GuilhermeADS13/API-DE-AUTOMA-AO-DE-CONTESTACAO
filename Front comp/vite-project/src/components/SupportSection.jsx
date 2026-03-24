@@ -10,6 +10,7 @@ export default function SupportSection({ form, errors, feedback, loading, onChan
     <section id="contato" className="py-5">
       <Container>
         <Row className="g-4">
+          {/* Coluna principal: formulario de envio da reclamacao. */}
           <Col lg={7}>
             <Card className="panel-card support-entry-primary border-0 h-100">
               <Card.Body className="p-4 p-lg-5">
@@ -130,6 +131,7 @@ export default function SupportSection({ form, errors, feedback, loading, onChan
             </Card>
           </Col>
 
+          {/* Coluna lateral: orientacoes de atendimento e checklist recomendado. */}
           <Col lg={5}>
             <div className="d-grid gap-4 h-100">
               <Card className="dashboard-card support-entry-secondary border-0">

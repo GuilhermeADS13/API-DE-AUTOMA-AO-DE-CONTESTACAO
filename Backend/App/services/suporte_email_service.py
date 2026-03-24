@@ -21,12 +21,14 @@ class SupportEmailServiceError(Exception):
 
 
 def _parse_bool(value: str | None, default: bool) -> bool:
+    """Converte string de ambiente para booleano com fallback padrao."""
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _resolve_email_config() -> dict[str, Any]:
+    """Le e valida configuracoes SMTP usadas no envio de suporte."""
     host = os.getenv("SUPPORT_SMTP_HOST", "").strip()
     user = os.getenv("SUPPORT_SMTP_USER", "").strip()
     password = os.getenv("SUPPORT_SMTP_PASSWORD", "").strip()
@@ -75,6 +77,7 @@ def _resolve_email_config() -> dict[str, Any]:
 
 
 def _build_email(payload: dict[str, Any], from_email: str, to_email: str) -> EmailMessage:
+    """Monta assunto/corpo do e-mail com dados da reclamacao e protocolo."""
     subject_prefix = os.getenv("SUPPORT_EMAIL_SUBJECT_PREFIX", DEFAULT_SUBJECT_PREFIX).strip()
     prefix = subject_prefix or DEFAULT_SUBJECT_PREFIX
     subject = f"{prefix} {payload['assunto']}".strip()

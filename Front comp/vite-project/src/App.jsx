@@ -102,6 +102,7 @@ export default function App() {
 
   const [liveDraft, setLiveDraft] = useState("");
   const [liveDraftTouched, setLiveDraftTouched] = useState(false);
+  // Estados dedicados ao fluxo de suporte/reclamacoes.
   const [supportForm, setSupportForm] = useState(() => ({
     nome: authUser?.name || "",
     email: authUser?.email || "",
@@ -522,6 +523,7 @@ export default function App() {
     }
   };
 
+  // Mantem formulario de suporte sincronizado com o usuario logado (quando existir).
   const handleSupportChange = (event) => {
     const { name, value } = event.target;
     setSupportForm((prev) => ({ ...prev, [name]: value }));
@@ -532,6 +534,7 @@ export default function App() {
     });
   };
 
+  // Aplica regras basicas de validacao antes de enviar ao backend de suporte.
   const validateSupportForm = () => {
     const errors = {};
 
@@ -570,6 +573,7 @@ export default function App() {
     return errors;
   };
 
+  // Envia reclamacao para /api/suporte/contato e exibe protocolo retornado.
   const handleSupportSubmit = async (event) => {
     event.preventDefault();
     if (supportLoading) return;
