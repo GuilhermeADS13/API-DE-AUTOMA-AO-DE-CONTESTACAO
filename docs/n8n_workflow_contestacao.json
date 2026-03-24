@@ -1,0 +1,87 @@
+[
+    {
+        "id":  "WF_AUTOJURI_CONTESTACAO",
+        "versionId":  "b4fe58a8-8f0e-4f8d-8e60-15d7701d4ac8",
+        "name":  "AutoJuri - Webhook Contestacao",
+        "active":  false,
+        "nodes":  [
+                      {
+                          "parameters":  {
+                                             "httpMethod":  "POST",
+                                             "path":  "contestacao",
+                                             "responseMode":  "responseNode",
+                                             "options":  {
+
+                                                         }
+                                         },
+                          "id":  "node-webhook-contestacao",
+                          "name":  "Webhook Contestacao",
+                          "type":  "n8n-nodes-base.webhook",
+                          "typeVersion":  2.1,
+                          "webhookId":  "autojuri-contestacao-webhook",
+                          "position":  [
+                                           240,
+                                           280
+                                       ]
+                      },
+                      {
+                          "parameters":  {
+                                             "mode":  "runOnceForAllItems",
+                                             "jsCode":  "const input = $input.first()?.json || {};\nconst payload = input.body \u0026\u0026 typeof input.body === \u0027object\u0027 ? input.body : input;\n\nconst normalize = (value, fallback = \u0027\u0027) =\u003e {\n  if (value === null || value === undefined) return fallback;\n  return String(value).trim();\n};\n\nconst numeroProcesso = normalize(payload.numero_processo);\nconst autor = normalize(payload.autor);\nconst reu = normalize(payload.reu, \u0027Nao informado\u0027);\nconst tipoAcao = normalize(payload.tipo_acao);\nconst fatos = normalize(payload.fatos);\nconst pedidoAutor = normalize(payload.pedido_autor);\nconst textoEditado = normalize(payload.texto_editado_ao_vivo);\n\nconst errors = [];\nif (!numeroProcesso) errors.push(\u0027numero_processo obrigatorio\u0027);\nif (!autor) errors.push(\u0027autor obrigatorio\u0027);\nif (!tipoAcao) errors.push(\u0027tipo_acao obrigatorio\u0027);\nif (!fatos) errors.push(\u0027fatos obrigatorio\u0027);\nif (!pedidoAutor) errors.push(\u0027pedido_autor obrigatorio\u0027);\n\nconst cnjRegex = /^\\d{7}-\\d{2}\\.\\d{4}\\.\\d\\.\\d{2}\\.\\d{4}$/;\nif (numeroProcesso \u0026\u0026 !cnjRegex.test(numeroProcesso)) {\n  errors.push(\u0027numero_processo fora do padrao CNJ 0001234-56.2026.8.00.0000\u0027);\n}\n\nconst regrasAplicadas = [\n  \u0027Validacao de campos obrigatorios\u0027,\n  \u0027Validacao de numero de processo no padrao CNJ\u0027,\n  \u0027Normalizacao de dados textuais\u0027,\n  \u0027Geracao de defesa por IA com guarda de resposta estruturada\u0027,\n  \u0027Linguagem juridica formal para revisao humana obrigatoria\u0027,\n];\n\nif (errors.length) {\n  return [\n    {\n      json: {\n        status: \u0027erro_validacao\u0027,\n        mensagem: \u0027Falha de validacao no agente de IA do n8n.\u0027,\n        erros: errors,\n        regras_aplicadas: regrasAplicadas,\n        recebido_em: new Date().toISOString(),\n      },\n    },\n  ];\n}\n\nconst OPENAI_API_KEY = normalize(process.env.OPENAI_API_KEY);\nconst OPENAI_MODEL = normalize(process.env.OPENAI_MODEL, \u0027gpt-5.3-codex\u0027);\nconst OPENAI_BASE_URL = normalize(process.env.OPENAI_BASE_URL, \u0027https://api.openai.com/v1\u0027).replace(/\\/+$/, \u0027\u0027);\nconst OPENAI_MAX_OUTPUT_TOKENS = Math.max(\n  600,\n  Number.parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || \u00272200\u0027, 10) || 2200,\n);\nconst OPENAI_TIMEOUT_MS = Math.max(\n  10000,\n  Number.parseInt(process.env.OPENAI_TIMEOUT_MS || \u002735000\u0027, 10) || 35000,\n);\nconst OPENAI_TEMPERATURE_RAW = Number.parseFloat(process.env.OPENAI_TEMPERATURE || \u00270.15\u0027);\nconst OPENAI_TEMPERATURE = Number.isFinite(OPENAI_TEMPERATURE_RAW)\n  ? Math.min(Math.max(OPENAI_TEMPERATURE_RAW, 0), 1)\n  : 0.15;\n\nconst buildFallbackDraft = (reason = \u0027fallback_local\u0027) =\u003e {\n  const sintese = `Trata-se de contestacao referente ao processo ${numeroProcesso}, proposta por ${autor} em face de ${reu}, no contexto de ${tipoAcao}.`;\n  const fundamentos = `Em sintese, os fatos relevantes indicam: ${fatos}. Impugna-se a narrativa inicial e requer-se a improcedencia dos pedidos autorais, com observancia do contraditorio e ampla defesa.`;\n  const pedidos = `Requer-se: (i) recebimento da presente contestacao; (ii) improcedencia integral do pedido autoral (${pedidoAutor}); (iii) producao de todos os meios de prova em direito admitidos.`;\n\n  const minutaBase = [\n    \u0027I - Sintese da Demanda\u0027,\n    sintese,\n    \u0027\u0027,\n    \u0027II - Fundamentos de Defesa\u0027,\n    fundamentos,\n    \u0027\u0027,\n    \u0027III - Pedidos\u0027,\n    pedidos,\n    \u0027\u0027,\n    textoEditado ? \u0027IV - Observacoes do Operador\\n\u0027 + textoEditado : \u0027\u0027,\n  ]\n    .filter(Boolean)\n    .join(\u0027\\n\\n\u0027);\n\n  return {\n    json: {\n      status: \u0027ok\u0027,\n      mensagem:\n        \u0027Contestacao processada em modo fallback local. Configure OPENAI_API_KEY no n8n para ativar IA generativa.\u0027,\n      numero_processo: numeroProcesso,\n      protocolo_n8n: `N8N-${Date.now()}`,\n      regras_aplicadas: [...regrasAplicadas, \u0027Fallback local sem chamada externa\u0027],\n      engine_ia: {\n        provider: \u0027fallback_local\u0027,\n        model: \u0027deterministico\u0027,\n        motivo: reason,\n      },\n      minuta: {\n        texto_base: minutaBase,\n        secoes: {\n          sintese,\n          fundamentos,\n          pedidos,\n        },\n        resumo_estrategico:\n          \u0027Resposta em fallback local. Revisar e configurar OpenAI no n8n para argumentacao generativa completa.\u0027,\n        riscos: [\u0027Sem IA ativa: revisar fundamentacao e citacoes manualmente.\u0027],\n      },\n      contexto: {\n        autor,\n        reu,\n        tipo_acao: tipoAcao,\n      },\n      recebido_em: new Date().toISOString(),\n    },\n  };\n};\n\nif (!OPENAI_API_KEY) {\n  return [buildFallbackDraft(\u0027OPENAI_API_KEY_nao_configurada\u0027)];\n}\n\nconst stripMarkdownFences = (value) =\u003e {\n  const trimmed = normalize(value);\n  if (!trimmed.startsWith(\u0027```\u0027)) return trimmed;\n\n  return trimmed\n    .replace(/^```(?:json)?\\s*/i, \u0027\u0027)\n    .replace(/\\s*```$/i, \u0027\u0027)\n    .trim();\n};\n\nconst parseModelJson = (value) =\u003e {\n  const direct = stripMarkdownFences(value);\n  return JSON.parse(direct);\n};\n\nconst systemPrompt = [\n  \u0027Voce e um agente juridico especialista em contestacoes civeis no Brasil.\u0027,\n  \u0027Escreva em portugues formal, com objetividade, sem inventar jurisprudencia ou fatos.\u0027,\n  \u0027Nao inclua informacoes fora do caso enviado. Nao use markdown.\u0027,\n  \u0027Retorne SOMENTE JSON valido com as chaves:\u0027,\n  \u0027{\"resumo_estrategico\":\"...\",\"sintese\":\"...\",\"fundamentos\":\"...\",\"pedidos\":\"...\",\"observacoes\":\"...\",\"riscos\":[\"...\"]}\u0027,\n  \u0027Cada campo textual deve vir preenchido e riscos deve ter de 1 a 5 itens.\u0027,\n].join(\u0027 \u0027);\n\nconst userPrompt = [\n  `numero_processo: ${numeroProcesso}`,\n  `autor: ${autor}`,\n  `reu: ${reu}`,\n  `tipo_acao: ${tipoAcao}`,\n  `fatos: ${fatos}`,\n  `pedido_autor: ${pedidoAutor}`,\n  `texto_editado_ao_vivo: ${textoEditado || \u0027(vazio)\u0027}`,\n  \u0027Gere uma contestacao inicial estruturada para revisao humana, mantendo consistencia com os dados acima.\u0027,\n].join(\u0027\\n\u0027);\n\nconst requestBody = {\n  model: OPENAI_MODEL,\n  temperature: OPENAI_TEMPERATURE,\n  max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,\n  input: [\n    {\n      role: \u0027system\u0027,\n      content: [{ type: \u0027input_text\u0027, text: systemPrompt }],\n    },\n    {\n      role: \u0027user\u0027,\n      content: [{ type: \u0027input_text\u0027, text: userPrompt }],\n    },\n  ],\n};\n\nconst controller = new AbortController();\nconst timeoutHandle = setTimeout(() =\u003e controller.abort(), OPENAI_TIMEOUT_MS);\n\nlet openaiPayload = {};\n\ntry {\n  const response = await fetch(`${OPENAI_BASE_URL}/responses`, {\n    method: \u0027POST\u0027,\n    headers: {\n      Authorization: `Bearer ${OPENAI_API_KEY}`,\n      \u0027Content-Type\u0027: \u0027application/json\u0027,\n    },\n    body: JSON.stringify(requestBody),\n    signal: controller.signal,\n  });\n\n  openaiPayload = await response.json().catch(() =\u003e ({}));\n\n  if (!response.ok) {\n    const detail =\n      normalize(openaiPayload?.error?.message) || `HTTP_${response.status}`;\n    throw new Error(`OpenAI API falhou: ${detail}`);\n  }\n} catch (error) {\n  clearTimeout(timeoutHandle);\n  const reason = normalize(error?.message, \u0027erro_openai\u0027).slice(0, 140);\n  return [buildFallbackDraft(reason)];\n}\n\nclearTimeout(timeoutHandle);\n\nconst outputParts = [];\n\nif (typeof openaiPayload?.output_text === \u0027string\u0027 \u0026\u0026 openaiPayload.output_text.trim()) {\n  outputParts.push(openaiPayload.output_text);\n}\n\nif (Array.isArray(openaiPayload?.output)) {\n  for (const block of openaiPayload.output) {\n    if (!Array.isArray(block?.content)) continue;\n    for (const contentItem of block.content) {\n      const candidateText =\n        normalize(contentItem?.text) ||\n        normalize(contentItem?.output_text) ||\n        normalize(contentItem?.input_text);\n      if (candidateText) outputParts.push(candidateText);\n    }\n  }\n}\n\nconst rawModelText = outputParts.join(\u0027\\n\u0027).trim();\nif (!rawModelText) {\n  return [buildFallbackDraft(\u0027resposta_openai_sem_conteudo\u0027)];\n}\n\nlet modelData = {};\n\ntry {\n  modelData = parseModelJson(rawModelText);\n} catch {\n  return [buildFallbackDraft(\u0027resposta_openai_nao_json\u0027)];\n}\n\nconst sinteseIa =\n  normalize(modelData.sintese) ||\n  `Trata-se de contestacao referente ao processo ${numeroProcesso}, proposta por ${autor} em face de ${reu}, no contexto de ${tipoAcao}.`;\n\nconst fundamentosIa =\n  normalize(modelData.fundamentos) ||\n  `Com base nos fatos informados (${fatos}), impugna-se a narrativa autoral e requer-se a improcedencia dos pedidos.`;\n\nconst pedidosIa =\n  normalize(modelData.pedidos) ||\n  `Requer-se o recebimento da presente contestacao e a improcedencia do pedido autoral (${pedidoAutor}).`;\n\nconst observacoesIa = normalize(modelData.observacoes);\nconst resumoEstrategico =\n  normalize(modelData.resumo_estrategico) ||\n  \u0027Defesa inicial gerada por IA para revisao humana antes do protocolo.\u0027;\n\nconst riscos = Array.isArray(modelData.riscos)\n  ? modelData.riscos.map((item) =\u003e normalize(item)).filter(Boolean).slice(0, 5)\n  : [];\n\nconst minutaBase = [\n  \u0027I - Sintese da Demanda\u0027,\n  sinteseIa,\n  \u0027\u0027,\n  \u0027II - Fundamentos de Defesa\u0027,\n  fundamentosIa,\n  \u0027\u0027,\n  \u0027III - Pedidos\u0027,\n  pedidosIa,\n  \u0027\u0027,\n  textoEditado ? \u0027IV - Observacoes do Operador\\n\u0027 + textoEditado : \u0027\u0027,\n  observacoesIa ? \u0027V - Observacoes do Agente de IA\\n\u0027 + observacoesIa : \u0027\u0027,\n  riscos.length ? \u0027VI - Riscos e Pontos de Atencao\\n- \u0027 + riscos.join(\u0027\\n- \u0027) : \u0027\u0027,\n]\n  .filter(Boolean)\n  .join(\u0027\\n\\n\u0027);\n\nreturn [\n  {\n    json: {\n      status: \u0027ok\u0027,\n      mensagem: \u0027Contestacao processada pelo agente de IA (OpenAI).\u0027,\n      numero_processo: numeroProcesso,\n      protocolo_n8n: `N8N-${Date.now()}`,\n      regras_aplicadas: regrasAplicadas,\n      engine_ia: {\n        provider: \u0027openai\u0027,\n        model: OPENAI_MODEL,\n        endpoint: `${OPENAI_BASE_URL}/responses`,\n        temperature: OPENAI_TEMPERATURE,\n        max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,\n      },\n      minuta: {\n        texto_base: minutaBase,\n        secoes: {\n          sintese: sinteseIa,\n          fundamentos: fundamentosIa,\n          pedidos: pedidosIa,\n        },\n        resumo_estrategico: resumoEstrategico,\n        riscos,\n      },\n      contexto: {\n        autor,\n        reu,\n        tipo_acao: tipoAcao,\n      },\n      recebido_em: new Date().toISOString(),\n    },\n  },\n];"
+                                         },
+                          "id":  "node-agente-ia-regras",
+                          "name":  "Agente IA Regras Contestacao",
+                          "type":  "n8n-nodes-base.code",
+                          "typeVersion":  2,
+                          "position":  [
+                                           390,
+                                           280
+                                       ]
+                      },
+                      {
+                          "parameters":  {
+                                             "respondWith":  "json",
+                                             "responseBody":  "={{$json}}",
+                                             "options":  {
+
+                                                         }
+                                         },
+                          "id":  "node-response-contestacao",
+                          "name":  "Responder",
+                          "type":  "n8n-nodes-base.respondToWebhook",
+                          "typeVersion":  1.4,
+                          "position":  [
+                                           560,
+                                           280
+                                       ]
+                      }
+                  ],
+        "connections":  {
+                            "Webhook Contestacao":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Agente IA Regras Contestacao",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                            "Agente IA Regras Contestacao":  {
+                                                                 "main":  [
+                                                                              [
+                                                                                  {
+                                                                                      "node":  "Responder",
+                                                                                      "type":  "main",
+                                                                                      "index":  0
+                                                                                  }
+                                                                              ]
+                                                                          ]
+                                                             }
+                        },
+        "settings":  {
+                         "executionOrder":  "v1"
+                     }
+    }
+]

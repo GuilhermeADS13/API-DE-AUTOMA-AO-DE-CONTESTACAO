@@ -40,3 +40,4 @@ Use `Backend/.env.example` como referencia:
 - O backend cria automaticamente a tabela `contestacoes` no PostgreSQL na primeira execucao.
 - O envio de contestacao agora exige autenticacao.
 - O frontend usa `credentials: include` para sessao por cookie HTTPOnly.
+- Para ativar o agente de IA no n8n (OpenAI + fallback), use `docs/GUIA_N8N_AGENTE_IA.md`.

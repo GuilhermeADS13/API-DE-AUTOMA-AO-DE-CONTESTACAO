@@ -1,3 +1,4 @@
+// Badge visual reutilizavel para status de itens no dashboard.
 import React from "react";
 import { Badge } from "react-bootstrap";
 

@@ -1,3 +1,4 @@
+// Modal de autenticacao para login e cadastro via Supabase Auth.
 import React from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 

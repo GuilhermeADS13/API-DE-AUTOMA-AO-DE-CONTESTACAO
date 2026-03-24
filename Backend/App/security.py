@@ -1,6 +1,10 @@
 """Utilitarios de autenticacao/sessao para rotas FastAPI."""
 
+import json
 import os
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request as UrlRequest, urlopen
 
 from fastapi import Header, HTTPException, Request, Response, status
 
@@ -12,6 +16,17 @@ SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "contestacao_session")
 # Configuracoes para endurecer sessao em producao sem quebrar ambiente local.
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "lax").lower()
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").strip().lower() == "true"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_PUBLISHABLE_KEY = (
+    os.getenv("SUPABASE_PUBLISHABLE_KEY")
+    or os.getenv("SUPABASE_ANON_KEY")
+    or ""
+).strip()
+
+try:
+    SUPABASE_AUTH_TIMEOUT_SECONDS = int(os.getenv("SUPABASE_AUTH_TIMEOUT_SECONDS", "8"))
+except ValueError:
+    SUPABASE_AUTH_TIMEOUT_SECONDS = 8
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -56,6 +71,70 @@ def clear_session_cookie(response: Response) -> None:
     )
 
 
+def _build_supabase_user(user_data: dict[str, Any]) -> dict[str, str] | None:
+    user_id = str(user_data.get("id") or "").strip()
+    email = str(user_data.get("email") or "").strip().lower()
+    if not user_id or not email:
+        return None
+
+    metadata = user_data.get("user_metadata")
+    metadata_name = ""
+    if isinstance(metadata, dict):
+        metadata_name = str(metadata.get("name") or metadata.get("full_name") or "").strip()
+
+    nome = metadata_name or email.split("@", 1)[0] or "Conta"
+    return {
+        "id": user_id,
+        "nome": nome,
+        "email": email,
+        "auth_provider": "supabase",
+    }
+
+
+def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
+    """Valida bearer token no Auth do Supabase e retorna perfil basico."""
+    if not SUPABASE_URL or not token:
+        return None
+
+    request_headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    if SUPABASE_PUBLISHABLE_KEY:
+        request_headers["apikey"] = SUPABASE_PUBLISHABLE_KEY
+
+    request = UrlRequest(
+        url=f"{SUPABASE_URL}/auth/v1/user",
+        headers=request_headers,
+        method="GET",
+    )
+
+    try:
+        with urlopen(request, timeout=SUPABASE_AUTH_TIMEOUT_SECONDS) as response:
+            body = response.read()
+    except HTTPError as error:
+        if error.code in {401, 403}:
+            return None
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Falha ao validar token no Supabase.",
+        ) from error
+    except (URLError, TimeoutError, OSError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nao foi possivel validar autenticacao no Supabase.",
+        ) from error
+
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    return _build_supabase_user(payload)
+
+
 async def get_authenticated_user(
     request: Request,
     authorization: str | None = Header(default=None),
@@ -66,6 +145,22 @@ async def get_authenticated_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Autenticacao obrigatoria para este endpoint.",
+        )
+
+    bearer_token = _extract_bearer_token(authorization)
+    if bearer_token:
+        # Compatibilidade: aceita token opaco legado ou JWT do Supabase no header.
+        session = get_sessao_ativa(bearer_token)
+        if session:
+            return session
+
+        supabase_user = validate_supabase_bearer_token(bearer_token)
+        if supabase_user:
+            return supabase_user
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sessao invalida ou expirada. Faca login novamente.",
         )
 
     session = get_sessao_ativa(token)

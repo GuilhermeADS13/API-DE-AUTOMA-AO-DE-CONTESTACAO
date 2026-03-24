@@ -7,8 +7,7 @@ Este guia descreve o que cada parte principal faz e aponta melhorias futuras.
 ### `src/config/api.js`
 - `API_BASE_URL`: base da API.
 - `AGENT_API_URL`: endpoint de envio da contestacao.
-- `AUTH_SIGNUP_API_URL`, `AUTH_LOGIN_API_URL`, `AUTH_LOGOUT_API_URL`: endpoints de autenticacao.
-- `AUTH_SESSION_API_URL`: endpoint para validar sessao ativa.
+- `DASHBOARD_SUMMARY_API_URL`: endpoint de cards e historico reais do dashboard.
 - `SUPPORT_CONTACT_API_URL`: endpoint de envio da reclamacao para suporte.
 
 Melhorias futuras:
@@ -64,10 +63,11 @@ Melhorias futuras:
 
 ### `src/App.jsx`
 - `readValidSession()`: valida perfil salvo localmente.
-- `handleAuthSubmit()`: login/cadastro com cookie HTTPOnly e persistencia local do perfil.
-- `handleLogout()`: encerra sessao no backend e limpa sessao local.
+- `handleAuthSubmit()`: login/cadastro via Supabase Auth.
+- `handleLogout()`: encerra sessao no Supabase e limpa sessao local.
 - `validateForm()`: valida campos obrigatorios e numero CNJ.
 - `handleSubmit()`: serializa arquivo base64 e envia payload autenticado.
+- `loadDashboardData()`: sincroniza cards + historico reais no PostgreSQL.
 - `handleSaveDraft()`: salva rascunho.
 - `handleDownloadDoc()`, `handleDownloadPdf()`: exporta minuta.
 
@@ -144,6 +144,7 @@ Melhorias futuras:
 
 ### `Backend/App/routes/contestacao.py`
 - `gerar_contestacao(...)`: rota autenticada para envio ao n8n e persistencia.
+- `obter_resumo_contestacoes(...)`: cards e historico reais para o dashboard.
 
 Melhorias futuras:
 - Enfileirar processamento assíncrono (fila + worker).

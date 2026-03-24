@@ -84,3 +84,42 @@ def test_get_authenticated_user_fluxo_feliz(monkeypatch):
 
     result = asyncio.run(security.get_authenticated_user(request, None))
     assert result == fake_session
+
+
+def test_get_authenticated_user_valida_bearer_supabase(monkeypatch):
+    request = _request_com_headers([])
+    supabase_user = {
+        "id": "d20fdacb-4f53-4f9a-a280-2e16cb5ab6f7",
+        "nome": "Ana",
+        "email": "ana@teste.com",
+        "auth_provider": "supabase",
+    }
+
+    monkeypatch.setattr(security, "get_sessao_ativa", lambda token: None)
+    monkeypatch.setattr(security, "validate_supabase_bearer_token", lambda token: supabase_user)
+
+    result = asyncio.run(
+        security.get_authenticated_user(
+            request=request,
+            authorization="Bearer jwt-token-de-teste",
+        )
+    )
+
+    assert result == supabase_user
+
+
+def test_get_authenticated_user_bearer_invalido_retorna_401(monkeypatch):
+    request = _request_com_headers([])
+
+    monkeypatch.setattr(security, "get_sessao_ativa", lambda token: None)
+    monkeypatch.setattr(security, "validate_supabase_bearer_token", lambda token: None)
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            security.get_authenticated_user(
+                request=request,
+                authorization="Bearer jwt-token-invalido",
+            )
+        )
+
+    assert exc_info.value.status_code == 401

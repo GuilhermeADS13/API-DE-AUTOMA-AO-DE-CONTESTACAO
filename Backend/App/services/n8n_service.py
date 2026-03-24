@@ -1,3 +1,4 @@
+# Servico de integracao com webhook do n8n para disparo de workflows de contestacao.
 import asyncio
 import json
 import os
@@ -18,14 +19,23 @@ def get_n8n_webhook_url() -> str:
     return webhook_url or DEFAULT_N8N_WEBHOOK_URL
 
 
+def get_n8n_webhook_auth_token() -> str:
+    return os.getenv("N8N_WEBHOOK_AUTH_TOKEN", "").strip()
+
+
 def _enviar_para_n8n_sync(dados: dict[str, Any]) -> Any:
     """Execucao sincrona do POST para n8n (usada em thread dedicada)."""
     webhook_url = get_n8n_webhook_url()
     body = json.dumps(dados).encode("utf-8")
+    request_headers = {"Content-Type": "application/json"}
+    auth_token = get_n8n_webhook_auth_token()
+    if auth_token:
+        request_headers["Authorization"] = f"Bearer {auth_token}"
+
     request = Request(
         url=webhook_url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=request_headers,
         method="POST",
     )
 

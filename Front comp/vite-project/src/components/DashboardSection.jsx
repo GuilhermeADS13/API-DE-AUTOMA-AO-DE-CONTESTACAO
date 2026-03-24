@@ -1,12 +1,17 @@
+// Secao de dashboard com indicadores de automacao e historico de contestacoes.
 import React from "react";
 import { Badge, Card, Col, Container, ProgressBar, Row, Table } from "react-bootstrap";
-import { dashboardCards } from "../data/mockData";
 import StatusBadge from "./ui/StatusBadge";
 
 /**
  * Dashboard com cards de indicadores, barras de status e historico de casos.
  */
-export default function DashboardSection({ history, automationStatus }) {
+export default function DashboardSection({
+  history,
+  automationStatus,
+  dashboardCards = [],
+  loading = false,
+}) {
   return (
     <section id="dashboard" className="py-5">
       <Container>
@@ -84,17 +89,27 @@ export default function DashboardSection({ history, automationStatus }) {
                     </thead>
 
                     <tbody>
-                      {history.map((item) => (
-                        <tr key={item.id}>
-                          <td className="fw-semibold">{item.id}</td>
-                          <td>{item.naturezaCaso}</td>
-                          <td>{item.tipo}</td>
-                          <td>{item.data}</td>
-                          <td>
-                            <StatusBadge status={item.status} />
+                      {history.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-secondary">
+                            {loading
+                              ? "Carregando historico do banco de dados..."
+                              : "Nenhum caso encontrado no banco para este usuario."}
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        history.map((item) => (
+                          <tr key={item.id}>
+                            <td className="fw-semibold">{item.id}</td>
+                            <td>{item.naturezaCaso}</td>
+                            <td>{item.tipo}</td>
+                            <td>{item.data}</td>
+                            <td>
+                              <StatusBadge status={item.status} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </Table>
                 </div>

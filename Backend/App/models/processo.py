@@ -1,3 +1,4 @@
+# Schema Pydantic da entrada de processo/contestacao e validacoes de arquivo.
 import base64
 import binascii
 import re

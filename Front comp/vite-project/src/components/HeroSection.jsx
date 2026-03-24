@@ -1,3 +1,4 @@
+// Hero principal da landing com proposta de valor e chamadas para acao.
 import React from "react";
 import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import {

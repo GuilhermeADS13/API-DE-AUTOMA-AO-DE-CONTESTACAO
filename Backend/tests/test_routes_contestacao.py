@@ -50,8 +50,12 @@ def test_gerar_contestacao_fluxo_feliz(monkeypatch, processo_valido):
 
     assert response["status"] == "processando"
     assert response["id_registro"] == 77
+    assert response["id_caso"].startswith("CTR-")
     assert response["workflow"] == {"workflow_id": "wf-123"}
     assert calls["payload_n8n"]["usuario_id"] == "USR-ABC"
+    assert calls["payload_n8n"]["usuario_nome"] == "Ana"
+    assert calls["payload_n8n"]["usuario_email"] == "ana@teste.com"
+    assert calls["payload_n8n"]["auth_provider"] == "legacy"
     assert calls["save"]["status"] == "processando"
 
 
@@ -83,3 +87,74 @@ def test_gerar_contestacao_trata_erro_n8n(monkeypatch, processo_valido):
     assert "workflow indisponivel" in str(exc_info.value.detail)
     assert calls["save"]["status"] == "erro"
     assert "workflow indisponivel" in calls["save"]["n8n_resposta"]["mensagem"]
+
+
+def test_gerar_contestacao_retorna_422_em_erro_validacao(monkeypatch, processo_valido):
+    calls: dict = {}
+
+    async def fake_enviar_para_n8n(payload):
+        return {
+            "status": "erro_validacao",
+            "mensagem": "Numero de processo invalido no workflow.",
+            "erros": ["numero_processo"],
+        }
+
+    def fake_save_contestacao(payload, status, n8n_resposta):
+        calls["save"] = {
+            "status": status,
+            "n8n_resposta": n8n_resposta,
+        }
+        return 45
+
+    monkeypatch.setattr(contestacao, "enviar_para_n8n", fake_enviar_para_n8n)
+    monkeypatch.setattr(contestacao, "save_contestacao", fake_save_contestacao)
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            contestacao.gerar_contestacao(
+                processo=processo_valido,
+                usuario={"id": "USR-VAL", "nome": "Ana", "email": "ana@teste.com"},
+            )
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "invalido" in str(exc_info.value.detail).lower()
+    assert calls["save"]["status"] == "erro_validacao"
+
+
+def test_obter_resumo_contestacoes_retorna_cards_e_historico(monkeypatch):
+    calls: dict = {}
+
+    def fake_get_dashboard_cards_por_usuario(usuario_id):
+        calls["cards_usuario_id"] = usuario_id
+        return [{"label": "Total de casos", "value": "3"}]
+
+    def fake_list_contestacoes_por_usuario(usuario_id, limit):
+        calls["history_usuario_id"] = usuario_id
+        calls["history_limit"] = limit
+        return [
+            {
+                "id": "CTR-2026-000001",
+                "naturezaCaso": "Direito Civil",
+                "tipo": "Defesa editada",
+                "data": "24/03/2026",
+                "status": "Concluida",
+                "numeroProcesso": "0001234-56.2026.8.00.0000",
+            }
+        ]
+
+    monkeypatch.setattr(contestacao, "get_dashboard_cards_por_usuario", fake_get_dashboard_cards_por_usuario)
+    monkeypatch.setattr(contestacao, "list_contestacoes_por_usuario", fake_list_contestacoes_por_usuario)
+
+    response = asyncio.run(
+        contestacao.obter_resumo_contestacoes(
+            limit=50,
+            usuario={"id": "USR-DASH", "nome": "Ana", "email": "ana@teste.com"},
+        )
+    )
+
+    assert response["cards"][0]["label"] == "Total de casos"
+    assert response["history"][0]["id"] == "CTR-2026-000001"
+    assert calls["cards_usuario_id"] == "USR-DASH"
+    assert calls["history_usuario_id"] == "USR-DASH"
+    assert calls["history_limit"] == 50

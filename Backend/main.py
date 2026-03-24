@@ -1,12 +1,6 @@
+# Ponto de entrada da API FastAPI com middlewares, rotas e healthchecks.
 import os
 from pathlib import Path
-
-from fastapi import FastAPI, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-
-from App.database import init_db, ping_database
-from App.routes import contestacao, suporte, usuario
-
 
 def load_env_file() -> None:
     env_path = Path(__file__).resolve().parent / ".env"
@@ -26,6 +20,12 @@ def load_env_file() -> None:
 
 
 load_env_file()
+
+from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+
+from App.database import init_db, ping_database
+from App.routes import contestacao, suporte, usuario
 
 
 def parse_frontend_origins() -> list[str]:

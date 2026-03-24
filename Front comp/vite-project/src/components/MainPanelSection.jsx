@@ -1,3 +1,4 @@
+// Painel de entrada do caso: formulario, upload e edicao ao vivo da minuta.
 import React, { useRef, useState } from "react";
 import {
   Alert,

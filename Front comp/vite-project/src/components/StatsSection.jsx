@@ -1,3 +1,4 @@
+// Secao de metricas/resumo para reforcar ganhos da automacao juridica.
 import React from "react";
 import { Card, Col, Container, Row } from "react-bootstrap";
 import { stats } from "../data/mockData";

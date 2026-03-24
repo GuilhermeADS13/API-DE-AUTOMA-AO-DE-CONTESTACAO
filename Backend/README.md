@@ -11,9 +11,26 @@ API FastAPI do projeto de automacao de contestacao com integracao n8n e persiste
 
 1. Copie `.env.example` para `.env`.
 2. Ajuste `N8N_WEBHOOK_URL` e `FRONTEND_ORIGINS`.
-3. Configure a conexao PostgreSQL.
-4. Configure opcoes de sessao (`SESSION_TTL_HOURS`, `SESSION_COOKIE_*`) quando necessario.
-5. Configure SMTP do canal de suporte (`SUPPORT_SMTP_*`, `SUPPORT_EMAIL_*`).
+3. Se o webhook do n8n exigir auth, configure `N8N_WEBHOOK_AUTH_TOKEN`.
+4. Configure `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` para validar Bearer token do frontend.
+5. Configure a conexao PostgreSQL.
+6. Configure opcoes de sessao (`SESSION_TTL_HOURS`, `SESSION_COOKIE_*`) quando necessario.
+7. Configure SMTP do canal de suporte (`SUPPORT_SMTP_*`, `SUPPORT_EMAIL_*`).
+
+## Variaveis do agente de IA (n8n)
+
+O workflow n8n `AutoJuri - Webhook Contestacao` usa estas variaveis no processo do n8n:
+
+```env
+OPENAI_API_KEY=sua_openai_api_key
+OPENAI_MODEL=gpt-5.3-codex
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MAX_OUTPUT_TOKENS=2200
+OPENAI_TEMPERATURE=0.15
+OPENAI_TIMEOUT_MS=35000
+```
+
+Sem `OPENAI_API_KEY`, o workflow entra em fallback local para nao interromper o fluxo.
 
 Opcao 1 (recomendada): `DATABASE_URL`
 
@@ -42,6 +59,10 @@ SUPPORT_SMTP_PASSWORD=sua_senha_smtp
 SUPPORT_EMAIL_FROM=suporte@seudominio.com
 SUPPORT_EMAIL_TO=suporte@seudominio.com
 SUPPORT_EMAIL_SUBJECT_PREFIX=[JurisFlow][Suporte]
+N8N_WEBHOOK_AUTH_TOKEN=
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxxxxxxxxxx
+SUPABASE_AUTH_TIMEOUT_SECONDS=8
 ```
 
 ## Executar localmente
@@ -67,6 +88,7 @@ Com o backend em execucao:
 - `GET /health` - healthcheck
 - `GET /health/db` - healthcheck da conexao PostgreSQL
 - `POST /api/gerar-contestacao` - envia dados para n8n e registra no PostgreSQL
+- `GET /api/contestacoes/resumo` - retorna cards e historico reais do dashboard (por usuario autenticado)
 - `POST /api/usuarios/cadastro` - cria conta de usuario com validacao de email/senha
 - `POST /api/usuarios/login` - autentica usuario por email/senha
 - `POST /api/usuarios/logout` - invalida token de sessao no servidor
@@ -75,7 +97,8 @@ Com o backend em execucao:
 
 ## Seguranca e sessao
 
-- O backend agora aceita sessao por cookie HTTPOnly e por header `Authorization: Bearer <token>`.
+- O backend aceita sessao legada por cookie HTTPOnly/token opaco.
+- O backend tambem aceita `Authorization: Bearer <jwt-do-supabase>` e valida no endpoint `auth/v1/user` do Supabase.
 - O endpoint `POST /api/gerar-contestacao` exige autenticacao.
 - CORS esta com `allow_credentials=True`, entao o frontend deve usar `credentials: "include"`.
 

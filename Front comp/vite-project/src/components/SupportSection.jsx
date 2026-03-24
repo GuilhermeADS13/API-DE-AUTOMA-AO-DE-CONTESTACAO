@@ -1,3 +1,4 @@
+// Secao de suporte para abertura de reclamacoes e contato com a equipe.
 import React from "react";
 import { Alert, Badge, Button, Card, Col, Container, Form, Row } from "react-bootstrap";
 import { supportChannels, supportChecklist, supportIssueTypes } from "../data/mockData";

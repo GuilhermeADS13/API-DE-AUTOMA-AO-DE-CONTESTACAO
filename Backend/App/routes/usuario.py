@@ -1,3 +1,4 @@
+# Rotas HTTP de autenticacao de usuario (cadastro, login, logout e sessao).
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status

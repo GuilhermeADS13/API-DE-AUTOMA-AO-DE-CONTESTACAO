@@ -1,3 +1,4 @@
+// Configuracao do Vite para build/dev server do frontend.
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 

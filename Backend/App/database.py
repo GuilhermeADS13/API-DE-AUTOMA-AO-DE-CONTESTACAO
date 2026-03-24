@@ -11,6 +11,7 @@ Este modulo centraliza:
 
 import os
 import threading
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote_plus
 from uuid import uuid4
@@ -213,6 +214,18 @@ def init_db() -> None:
 
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_usuarios_sessoes_criado_em ON usuarios_sessoes (criado_em)"
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_contestacoes_usuario_criado_em
+                    ON contestacoes (usuario_id, criado_em DESC)
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_contestacoes_usuario_status
+                    ON contestacoes (usuario_id, status)
+                    """
                 )
             connection.commit()
 
@@ -442,3 +455,100 @@ def save_contestacao(payload: dict[str, Any], status: str, n8n_resposta: Any) ->
         connection.commit()
 
     return int(inserted_id)
+
+
+def _format_case_id(contestacao_id: int, criado_em: datetime | None) -> str:
+    """Monta id legivel para o dashboard mantendo ordenacao por ano."""
+    case_year = criado_em.year if isinstance(criado_em, datetime) else datetime.now().year
+    return f"CTR-{case_year}-{int(contestacao_id):06d}"
+
+
+def _map_dashboard_status(status_value: str) -> tuple[str, str]:
+    """Converte status tecnico para rotulos amigaveis no frontend."""
+    normalized = status_value.strip().lower()
+    if normalized == "ok":
+        return ("Concluida", "Defesa editada")
+    if normalized == "processando":
+        return ("Em analise", "Defesa em processamento")
+    if normalized in {"erro_validacao", "rejeitado"}:
+        return ("Aguardando revisao", "Revisao de fundamentacao")
+    if normalized == "erro":
+        return ("Falha no envio", "Erro de integracao")
+    return ("Em analise", "Defesa em processamento")
+
+
+def list_contestacoes_por_usuario(usuario_id: str, limit: int = 20) -> list[dict[str, str]]:
+    """Retorna historico do dashboard para o usuario autenticado."""
+    _ensure_db_initialized()
+    safe_limit = max(1, min(int(limit), 100))
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, tipo_acao, status, criado_em, numero_processo
+                FROM contestacoes
+                WHERE usuario_id = %s
+                ORDER BY criado_em DESC
+                LIMIT %s
+                """,
+                (usuario_id, safe_limit),
+            )
+            rows = cursor.fetchall()
+
+    history: list[dict[str, str]] = []
+    for row in rows:
+        contestacao_id = int(row[0])
+        natureza_caso = str(row[1] or "Nao informado")
+        status_raw = str(row[2] or "")
+        criado_em = row[3] if isinstance(row[3], datetime) else None
+        numero_processo = str(row[4] or "").strip()
+        status_label, tipo_label = _map_dashboard_status(status_raw)
+        display_date = (criado_em or datetime.now()).strftime("%d/%m/%Y")
+
+        history.append(
+            {
+                "id": _format_case_id(contestacao_id, criado_em),
+                "naturezaCaso": natureza_caso,
+                "tipo": tipo_label,
+                "data": display_date,
+                "status": status_label,
+                "numeroProcesso": numero_processo,
+            }
+        )
+
+    return history
+
+
+def get_dashboard_cards_por_usuario(usuario_id: str) -> list[dict[str, str]]:
+    """Retorna cards de resumo do dashboard calculados no PostgreSQL."""
+    _ensure_db_initialized()
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    COUNT(*)::BIGINT AS total,
+                    COUNT(*) FILTER (WHERE status = 'ok')::BIGINT AS concluidas,
+                    COUNT(*) FILTER (WHERE status = 'processando')::BIGINT AS em_analise,
+                    COUNT(*) FILTER (
+                        WHERE status IN ('erro', 'erro_validacao', 'rejeitado')
+                    )::BIGINT AS pendencias
+                FROM contestacoes
+                WHERE usuario_id = %s
+                """,
+                (usuario_id,),
+            )
+            row = cursor.fetchone()
+
+    total = int(row[0] or 0) if row else 0
+    concluidas = int(row[1] or 0) if row else 0
+    em_analise = int(row[2] or 0) if row else 0
+    pendencias = int(row[3] or 0) if row else 0
+
+    return [
+        {"label": "Total de casos", "value": str(total)},
+        {"label": "Concluidas", "value": str(concluidas)},
+        {"label": "Em analise", "value": str(em_analise)},
+        {"label": "Com pendencia", "value": str(pendencias)},
+    ]

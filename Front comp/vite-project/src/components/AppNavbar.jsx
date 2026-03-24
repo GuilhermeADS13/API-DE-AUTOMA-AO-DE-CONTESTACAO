@@ -1,3 +1,4 @@
+// Barra de navegacao principal com menu de paginas e estado de autenticacao.
 import React from "react";
 import { Button, Container, Nav, Navbar } from "react-bootstrap";
 

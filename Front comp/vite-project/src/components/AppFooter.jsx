@@ -1,3 +1,4 @@
+// Rodape institucional da aplicacao com links, canais e contexto da plataforma.
 import React from "react";
 import { Container } from "react-bootstrap";
 
@@ -27,7 +28,7 @@ export default function AppFooter() {
             <div className="footer-title">Produto</div>
             <span>Painel de casos</span>
             <span>Automacao de defesas</span>
-            <span>Exportacao juridica</span>
+            <span>Exportacao Juridica</span>
           </div>
 
           <div className="footer-column">

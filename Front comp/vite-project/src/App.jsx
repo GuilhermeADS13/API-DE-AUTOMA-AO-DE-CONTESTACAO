@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Componente raiz do frontend: autenticacao, envio de casos, dashboard e suporte.
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 
 import AppNavbar from "./components/AppNavbar";
@@ -11,14 +12,10 @@ import SupportSection from "./components/SupportSection";
 import AppFooter from "./components/AppFooter";
 import {
   AGENT_API_URL,
-  AUTH_LOGIN_API_URL,
-  AUTH_LOGOUT_API_URL,
-  AUTH_SESSION_API_URL,
-  AUTH_SIGNUP_API_URL,
+  DASHBOARD_SUMMARY_API_URL,
   SUPPORT_CONTACT_API_URL,
 } from "./config/api";
-import { historyItems } from "./data/mockData";
-import { generateCaseId } from "./utils/cases";
+import { getSupabaseClient, isSupabaseConfigured } from "./lib/supabaseClient";
 import { normalizeFileName, readFileAsBase64, validateFile } from "./utils/files";
 import { escapeHtml } from "./utils/html";
 import {
@@ -51,6 +48,54 @@ function readValidSession() {
     name: session.name || "Conta",
     email: normalizedEmail,
   };
+}
+
+function mapSupabaseUser(user, fallbackName = "Conta") {
+  if (!user?.email) return null;
+  const normalizedEmail = normalizeEmail(user.email);
+  if (!isValidEmail(normalizedEmail)) return null;
+
+  const metadataName =
+    typeof user.user_metadata?.name === "string" ? user.user_metadata.name.trim() : "";
+
+  const inferredName = normalizedEmail.split("@")[0] || "Conta";
+
+  return {
+    id: user.id || "",
+    name: metadataName || fallbackName || inferredName,
+    email: normalizedEmail,
+  };
+}
+
+function getSupabaseAuthErrorMessage(error, fallbackMessage) {
+  const message = (error?.message || "").toLowerCase();
+
+  if (message.includes("invalid login credentials")) {
+    return "Nao encontramos uma conta com esse e-mail e senha.";
+  }
+
+  if (message.includes("email not confirmed")) {
+    return "Confirme seu e-mail antes de entrar.";
+  }
+
+  if (message.includes("user already registered")) {
+    return "Ja existe uma conta com este e-mail.";
+  }
+
+  if (message.includes("password should be at least")) {
+    return "A senha precisa ter pelo menos 6 caracteres.";
+  }
+
+  return fallbackMessage;
+}
+
+function buildEmptyDashboardCards() {
+  return [
+    { label: "Total de casos", value: "0" },
+    { label: "Concluidas", value: "0" },
+    { label: "Em analise", value: "0" },
+    { label: "Com pendencia", value: "0" },
+  ];
 }
 
 export default function App() {
@@ -87,7 +132,9 @@ export default function App() {
     ...(draftSeed.form || {}),
   }));
 
-  const [history, setHistory] = useState(() => [...historyItems]);
+  const [history, setHistory] = useState([]);
+  const [dashboardCards, setDashboardCards] = useState(buildEmptyDashboardCards);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   // `uploadedFile`: arquivo base selecionado pelo usuario para envio ao backend.
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadError, setUploadError] = useState("");
@@ -164,43 +211,78 @@ export default function App() {
     let isActive = true;
 
     const syncSession = async () => {
-      try {
-        const response = await fetch(AUTH_SESSION_API_URL, {
-          method: "GET",
-          credentials: "include",
-        });
+      if (!isSupabaseConfigured) {
+        if (!isActive) return;
+        clearSession();
+        setAuthUser(null);
+        return;
+      }
 
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase.auth.getUser();
         if (!isActive) return;
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            clearSession();
-            setAuthUser(null);
-          }
+        if (error || !data?.user) {
+          clearSession();
+          setAuthUser(null);
           return;
         }
 
-        const data = await response.json();
-        const usuario = data?.usuario || {};
-        const session = {
-          id: usuario.id || "",
-          name: usuario.nome || "Conta",
-          email: normalizeEmail(usuario.email || ""),
-        };
-        if (!session.email) return;
-
+        const session = mapSupabaseUser(data.user);
+        if (!session) return;
         persistSession(session);
         setAuthUser(session);
       } catch {
-        // Mantem sessao local quando backend nao estiver acessivel.
+        if (!isActive) return;
+        clearSession();
+        setAuthUser(null);
       }
     };
 
     syncSession();
+
+    if (!isSupabaseConfigured) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: authState } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        clearSession();
+        setAuthUser(null);
+        return;
+      }
+
+      const profile = mapSupabaseUser(session.user);
+      if (!profile) {
+        clearSession();
+        setAuthUser(null);
+        return;
+      }
+
+      persistSession(profile);
+      setAuthUser(profile);
+    });
+
     return () => {
       isActive = false;
+      authState.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setHistory([]);
+      setDashboardCards(buildEmptyDashboardCards());
+      setDashboardLoading(false);
+      return;
+    }
+
+    void loadDashboardData({ silent: true });
+  }, [authUser, loadDashboardData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -305,7 +387,7 @@ export default function App() {
   };
 
   const handleAuthSubmit = async (event) => {
-    // Faz cadastro/login e recebe cookie HTTPOnly de sessao via backend.
+    // Faz cadastro/login diretamente no servidor de autenticacao do Supabase.
     event.preventDefault();
     if (authLoading) return;
 
@@ -330,48 +412,64 @@ export default function App() {
     setAuthFeedback(null);
 
     try {
+      if (!isSupabaseConfigured) {
+        setAuthFeedback({
+          variant: "danger",
+          text: "Supabase nao configurado no frontend. Verifique o .env.local.",
+        });
+        return;
+      }
+
+      const supabase = getSupabaseClient();
+      const normalizedEmail = normalizeEmail(authForm.email);
+
       if (authMode === "signup") {
-        const response = await fetch(AUTH_SIGNUP_API_URL, {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password: authForm.password,
+          options: {
+            data: {
+              name: authForm.name.trim(),
+            },
           },
-          body: JSON.stringify({
-            name: authForm.name.trim(),
-            email: normalizeEmail(authForm.email),
-            password: authForm.password,
-          }),
         });
 
-        if (!response.ok) {
-          const errorMessage = await getApiErrorMessage(
-            response,
-            "Nao foi possivel criar sua conta agora.",
-          );
-
-          if (response.status === 409) {
+        if (error) {
+          if ((error.message || "").toLowerCase().includes("already registered")) {
             setAuthErrors({ email: "Ja existe uma conta com este e-mail." });
           }
 
           setAuthFeedback({
             variant: "danger",
-            text: errorMessage,
+            text: getSupabaseAuthErrorMessage(error, "Nao foi possivel criar sua conta agora."),
           });
           return;
         }
 
-        const data = await response.json();
-        const usuario = data?.usuario || {};
-        const session = {
-          id: usuario.id || "",
-          name: usuario.nome || authForm.name.trim(),
-          email: normalizeEmail(usuario.email || authForm.email),
-        };
+        setShowAuthModal(false);
+
+        // Se confirmacao de e-mail estiver ativa no projeto, pode nao existir sessao imediata.
+        if (!data?.session) {
+          clearSession();
+          setAuthUser(null);
+          setFeedback({
+            variant: "info",
+            text: "Conta criada. Confira seu e-mail para confirmar o cadastro e depois fazer login.",
+          });
+          return;
+        }
+
+        const session = mapSupabaseUser(data.user, authForm.name.trim() || "Conta");
+        if (!session) {
+          setFeedback({
+            variant: "warning",
+            text: "Conta criada, mas nao foi possivel carregar os dados da sessao.",
+          });
+          return;
+        }
 
         persistSession(session);
         setAuthUser(session);
-        setShowAuthModal(false);
         setFeedback({
           variant: "success",
           text: `Conta criada com sucesso. Bem-vindo ao workspace, ${session.name}.`,
@@ -379,25 +477,15 @@ export default function App() {
         return;
       }
 
-      const response = await fetch(AUTH_LOGIN_API_URL, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: normalizeEmail(authForm.email),
-          password: authForm.password,
-        }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: authForm.password,
       });
 
-      if (!response.ok) {
-        const errorMessage = await getApiErrorMessage(
-          response,
-          "Nao encontramos uma conta com esse e-mail e senha.",
-        );
+      if (error) {
+        const lowerMessage = (error.message || "").toLowerCase();
 
-        if (response.status === 401) {
+        if (lowerMessage.includes("invalid login credentials")) {
           setAuthErrors({
             email: "Verifique o e-mail informado.",
             password: "Verifique a senha informada.",
@@ -406,18 +494,19 @@ export default function App() {
 
         setAuthFeedback({
           variant: "danger",
-          text: errorMessage,
+          text: getSupabaseAuthErrorMessage(error, "Nao encontramos uma conta com esse e-mail e senha."),
         });
         return;
       }
 
-      const data = await response.json();
-      const usuario = data?.usuario || {};
-      const session = {
-        id: usuario.id || "",
-        name: usuario.nome || "Conta",
-        email: normalizeEmail(usuario.email || authForm.email),
-      };
+      const session = mapSupabaseUser(data.user);
+      if (!session) {
+        setAuthFeedback({
+          variant: "danger",
+          text: "Nao foi possivel carregar os dados da conta.",
+        });
+        return;
+      }
 
       persistSession(session);
       setAuthUser(session);
@@ -429,7 +518,7 @@ export default function App() {
     } catch {
       setAuthFeedback({
         variant: "danger",
-        text: "Nao foi possivel conectar com o backend de autenticacao.",
+        text: "Nao foi possivel conectar com o servidor do Supabase.",
       });
     } finally {
       setAuthLoading(false);
@@ -440,16 +529,27 @@ export default function App() {
     let remoteLogoutFailed = false;
 
     try {
-      const response = await fetch(AUTH_LOGOUT_API_URL, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
+      if (!isSupabaseConfigured) {
         remoteLogoutFailed = true;
+      } else {
+        const supabase = getSupabaseClient();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          remoteLogoutFailed = true;
+        }
       }
     } catch {
       remoteLogoutFailed = true;
+    }
+
+    if (!isSupabaseConfigured) {
+      clearSession();
+      setAuthUser(null);
+      setFeedback({
+        variant: "warning",
+        text: "Sessao local encerrada. Configure o Supabase para logout remoto.",
+      });
+      return;
     }
 
     clearSession();
@@ -457,7 +557,7 @@ export default function App() {
     setFeedback({
       variant: remoteLogoutFailed ? "warning" : "info",
       text: remoteLogoutFailed
-        ? "Sessao local encerrada, mas nao foi possivel confirmar logout no servidor."
+        ? "Sessao local encerrada, mas nao foi possivel confirmar logout no Supabase."
         : "Sessao encerrada com sucesso.",
     });
   };
@@ -522,6 +622,89 @@ export default function App() {
       });
     }
   };
+
+  const getSupabaseAccessToken = useCallback(async () => {
+    if (!isSupabaseConfigured) return null;
+
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) return null;
+      return data?.session?.access_token || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const loadDashboardData = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!authUser) {
+        setHistory([]);
+        setDashboardCards(buildEmptyDashboardCards());
+        return;
+      }
+
+      if (!silent) {
+        setDashboardLoading(true);
+      }
+
+      try {
+        const accessToken = await getSupabaseAccessToken();
+        const headers = { "Content-Type": "application/json" };
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`;
+        }
+
+        const response = await fetch(DASHBOARD_SUMMARY_API_URL, {
+          method: "GET",
+          credentials: "include",
+          headers,
+        });
+
+        if (response.status === 401) {
+          clearSession();
+          setAuthUser(null);
+          setHistory([]);
+          setDashboardCards(buildEmptyDashboardCards());
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            await getApiErrorMessage(
+              response,
+              "Nao foi possivel carregar historico real do dashboard.",
+            ),
+          );
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const nextCards =
+          Array.isArray(data?.cards) && data.cards.length > 0
+            ? data.cards
+            : buildEmptyDashboardCards();
+        const nextHistory = Array.isArray(data?.history) ? data.history : [];
+
+        setDashboardCards(nextCards);
+        setHistory(nextHistory);
+      } catch (error) {
+        if (!silent) {
+          setFeedback({
+            variant: "warning",
+            text:
+              error instanceof Error
+                ? error.message
+                : "Nao foi possivel sincronizar o dashboard com o banco de dados.",
+          });
+        }
+      } finally {
+        if (!silent) {
+          setDashboardLoading(false);
+        }
+      }
+    },
+    [authUser, getSupabaseAccessToken],
+  );
 
   // Mantem formulario de suporte sincronizado com o usuario logado (quando existir).
   const handleSupportChange = (event) => {
@@ -601,14 +784,27 @@ export default function App() {
     };
 
     try {
+      const accessToken = await getSupabaseAccessToken();
+      const requestHeaders = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        requestHeaders.Authorization = `Bearer ${accessToken}`;
+      }
+
       const response = await fetch(SUPPORT_CONTACT_API_URL, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: requestHeaders,
         body: JSON.stringify(payload),
       });
+
+      if (response.status === 401) {
+        clearSession();
+        setAuthUser(null);
+        openAuthModal("login");
+        throw new Error("Sua sessao expirou. Faca login novamente para enviar ao suporte.");
+      }
 
       if (!response.ok) {
         const errorMessage = await getApiErrorMessage(
@@ -674,23 +870,23 @@ export default function App() {
     setLoading(true);
     setSubmitted(false);
     setFeedback(null);
+    setLastCaseId(null);
     setAutomationStatus({ webhook: 100, ia: 32, validacao: 18 });
 
-    const nextCaseId = generateCaseId(history);
-    const today = new Date().toLocaleDateString("pt-BR");
-    setLastCaseId(nextCaseId);
-    setHistory((prev) => [
-      {
-        id: nextCaseId,
-        naturezaCaso: form.tipoAcao,
-        status: "Em analise",
-        data: today,
-        tipo: "Defesa em processamento",
-      },
-      ...prev,
-    ]);
-
     try {
+      const accessToken = await getSupabaseAccessToken();
+      if (isSupabaseConfigured && !accessToken) {
+        clearSession();
+        setAuthUser(null);
+        openAuthModal("login");
+        setFeedback({
+          variant: "warning",
+          text: "Sua sessao expirou. Faca login novamente para continuar.",
+        });
+        setLoading(false);
+        return;
+      }
+
       const arquivoConteudoBase64 = await readFileAsBase64(uploadedFile);
       const payload = {
         numero_processo: form.processo.trim(),
@@ -712,6 +908,7 @@ export default function App() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -726,37 +923,51 @@ export default function App() {
           clearSession();
           setAuthUser(null);
           openAuthModal("login");
+          throw new Error("Sessao expirada ou token invalido. Faca login novamente.");
         }
         throw new Error(errorMessage);
       }
 
-      await response.json().catch(() => ({}));
+      const backendData = await response.json().catch(() => ({}));
+      const workflowData =
+        backendData && typeof backendData === "object" && backendData.workflow
+          ? backendData.workflow
+          : {};
+      const suggestedDraft =
+        typeof workflowData?.minuta?.texto_base === "string"
+          ? workflowData.minuta.texto_base
+          : "";
+
+      if (suggestedDraft.trim()) {
+        setLiveDraft(suggestedDraft.trim());
+        setLiveDraftTouched(true);
+      }
+
+      if (typeof backendData?.id_caso === "string" && backendData.id_caso.trim()) {
+        setLastCaseId(backendData.id_caso.trim());
+      }
+
       setLoading(false);
       setSubmitted(true);
       setShowResultModal(true);
       setAutomationStatus({ webhook: 100, ia: 86, validacao: 92 });
-      setHistory((prev) =>
-        prev.map((item) =>
-          item.id === nextCaseId
-            ? { ...item, status: "Concluida", tipo: "Defesa editada" }
-            : item,
-        ),
-      );
+      const rulesAppliedCount = Array.isArray(workflowData?.regras_aplicadas)
+        ? workflowData.regras_aplicadas.length
+        : 0;
+
       setFeedback({
         variant: "success",
-        text: "Caso enviado ao agente de IA com sucesso. Defesa pronta para revisao.",
+        text:
+          rulesAppliedCount > 0
+            ? `Caso enviado ao agente com sucesso. Defesa pronta para revisao (${rulesAppliedCount} regras aplicadas).`
+            : "Caso enviado ao agente de IA com sucesso. Defesa pronta para revisao.",
       });
+      await loadDashboardData({ silent: true });
       setCurrentPage("dashboard");
     } catch (error) {
       setLoading(false);
       setAutomationStatus({ webhook: 42, ia: 0, validacao: 0 });
-      setHistory((prev) =>
-        prev.map((item) =>
-          item.id === nextCaseId
-            ? { ...item, status: "Falha no envio", tipo: "Erro de integracao" }
-            : item,
-        ),
-      );
+      await loadDashboardData({ silent: true });
       setFeedback({
         variant: "danger",
         text:
@@ -847,6 +1058,9 @@ export default function App() {
   };
 
   const handleNavigate = (pageId) => {
+    if (pageId === "dashboard" && authUser) {
+      void loadDashboardData({ silent: false });
+    }
     setCurrentPage(pageId);
   };
 
@@ -893,7 +1107,12 @@ export default function App() {
 
       {currentPage === "dashboard" && (
         <>
-          <DashboardSection history={history} automationStatus={automationStatus} />
+          <DashboardSection
+            history={history}
+            automationStatus={automationStatus}
+            dashboardCards={dashboardCards}
+            loading={dashboardLoading}
+          />
           <section className="pb-5">
             <div className="container">
               <div className="d-flex flex-wrap gap-2">
