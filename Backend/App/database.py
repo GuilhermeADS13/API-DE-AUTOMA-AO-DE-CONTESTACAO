@@ -129,10 +129,12 @@ def _connect():
     try:
         return psycopg2.connect(database_url, connect_timeout=timeout)
     except Exception as error:
-        if isinstance(error, psycopg2.OperationalError):
+        if isinstance(error, (psycopg2.OperationalError, UnicodeDecodeError)):
+            technical_detail = str(error).replace("\n", " ").strip() or "sem detalhe adicional"
             raise RuntimeError(
                 "Nao foi possivel conectar ao PostgreSQL. "
-                f"Verifique as variaveis do banco ({_mask_database_url(database_url)})."
+                f"Verifique as variaveis do banco ({_mask_database_url(database_url)}). "
+                f"Detalhe tecnico: {technical_detail}"
             ) from error
         raise
 

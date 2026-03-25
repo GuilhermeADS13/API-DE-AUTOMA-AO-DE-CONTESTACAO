@@ -15,7 +15,9 @@ def load_env_file() -> None:
         key, value = stripped.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        # Em desenvolvimento, garantimos que o .env do projeto tenha prioridade
+        # para evitar variaveis antigas do sistema operacional.
+        if key:
             os.environ[key] = value
 
 

@@ -273,17 +273,6 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!authUser) {
-      setHistory([]);
-      setDashboardCards(buildEmptyDashboardCards());
-      setDashboardLoading(false);
-      return;
-    }
-
-    void loadDashboardData({ silent: true });
-  }, [authUser, loadDashboardData]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -705,6 +694,17 @@ export default function App() {
     },
     [authUser, getSupabaseAccessToken],
   );
+
+  useEffect(() => {
+    if (!authUser) {
+      setHistory([]);
+      setDashboardCards(buildEmptyDashboardCards());
+      setDashboardLoading(false);
+      return;
+    }
+
+    void loadDashboardData({ silent: true });
+  }, [authUser, loadDashboardData]);
 
   // Mantem formulario de suporte sincronizado com o usuario logado (quando existir).
   const handleSupportChange = (event) => {
