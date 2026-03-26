@@ -27,7 +27,7 @@ export default function AppFooter() {
           <div className="footer-column">
             <div className="footer-title">Produto</div>
             <span>Painel de casos</span>
-            <span>Automacao de defesas</span>
+            <span>Automacao de Defesas</span>
             <span>Exportacao Juridica</span>
           </div>
 

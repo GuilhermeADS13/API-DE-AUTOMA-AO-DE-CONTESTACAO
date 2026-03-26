@@ -21,6 +21,8 @@ export default function AppNavbar({
   currentPage,
   onNavigate,
   authUser,
+  iaMode,
+  onIaModeChange,
   onOpenLogin,
   onOpenSignup,
   onLogout,
@@ -64,6 +66,26 @@ export default function AppNavbar({
           </Nav>
 
           <div className="nav-actions ms-lg-3">
+            <div className="d-flex align-items-center gap-2 me-lg-2 mb-2 mb-lg-0">
+              <small className="text-muted">Modo IA</small>
+              <div className="btn-group btn-group-sm" role="group" aria-label="Modo de IA">
+                <Button
+                  variant={iaMode === "teste_gratis" ? "dark" : "outline-dark"}
+                  size="sm"
+                  onClick={() => onIaModeChange("teste_gratis")}
+                >
+                  Teste gratis
+                </Button>
+                <Button
+                  variant={iaMode === "openai" ? "dark" : "outline-dark"}
+                  size="sm"
+                  onClick={() => onIaModeChange("openai")}
+                >
+                  OpenAI
+                </Button>
+              </div>
+            </div>
+
             {authUser ? (
               <>
                 <div className="auth-user-chip">
