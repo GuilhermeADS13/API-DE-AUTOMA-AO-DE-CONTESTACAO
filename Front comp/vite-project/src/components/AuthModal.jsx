@@ -97,7 +97,6 @@ export default function AuthModal({
               value={form.password}
               onChange={onFieldChange}
               onBlur={onFieldBlur}
-              maxLength={12}
               placeholder={isSignup ? "Crie uma senha forte" : "Digite sua senha"}
               autoComplete={isSignup ? "new-password" : "current-password"}
               isInvalid={Boolean(errors.password)}

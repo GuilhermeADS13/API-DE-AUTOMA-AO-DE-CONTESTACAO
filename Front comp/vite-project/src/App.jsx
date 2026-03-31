@@ -20,11 +20,9 @@ import { normalizeFileName, readFileAsBase64, validateFile } from "./utils/files
 import { escapeHtml } from "./utils/html";
 import {
   clearSession,
-  persistIaMode,
   persistDraft,
   persistSession,
   readDraftFromStorage,
-  readStoredIaMode,
   readStoredSession,
 } from "./utils/storage";
 import {
@@ -101,9 +99,9 @@ function buildEmptyDashboardCards() {
 }
 
 function getDashboardRefreshIntervalMs() {
-  const rawInterval = Number(import.meta.env.VITE_DASHBOARD_REFRESH_MS || 10000);
-  if (!Number.isFinite(rawInterval)) return 10000;
-  return Math.max(3000, rawInterval);
+  const rawInterval = Number(import.meta.env.VITE_DASHBOARD_REFRESH_MS || 30000);
+  if (!Number.isFinite(rawInterval)) return 30000;
+  return Math.max(30000, rawInterval);
 }
 
 export default function App() {
@@ -130,7 +128,6 @@ export default function App() {
   const [authErrors, setAuthErrors] = useState({});
   const [authFeedback, setAuthFeedback] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
-  const [iaMode, setIaMode] = useState(readStoredIaMode);
 
   const [form, setForm] = useState(() => ({
     processo: "",
@@ -208,10 +205,6 @@ export default function App() {
       setLiveDraft(generatedDraftText);
     }
   }, [generatedDraftText, liveDraftTouched]);
-
-  useEffect(() => {
-    persistIaMode(iaMode);
-  }, [iaMode]);
 
   useEffect(() => {
     setSupportForm((prev) => ({
@@ -939,8 +932,6 @@ export default function App() {
         tipo_acao: form.tipoAcao.trim(),
         fatos: form.observacoes.trim(),
         pedido_autor: form.tese.trim(),
-        modo_ia: iaMode,
-        openai_free_test_mode: iaMode === "teste_gratis",
         arquivo_base: uploadedFile?.name || "",
         arquivo_base_nome: uploadedFile?.name || "",
         arquivo_base_mime_type: uploadedFile?.type || "application/octet-stream",
@@ -1116,8 +1107,6 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         authUser={authUser}
-        iaMode={iaMode}
-        onIaModeChange={setIaMode}
         onOpenLogin={openAuthModal}
         onOpenSignup={openAuthModal}
         onLogout={handleLogout}

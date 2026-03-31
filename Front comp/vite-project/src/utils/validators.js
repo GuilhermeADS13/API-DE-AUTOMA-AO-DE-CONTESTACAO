@@ -9,7 +9,7 @@ export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 export const PROCESSO_REGEX = /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/;
 
 export const PASSWORD_MIN_LENGTH = 8;
-export const PASSWORD_MAX_LENGTH = 12;
+export const PASSWORD_MAX_LENGTH = 128;
 
 /**
  * Normaliza e-mail para comparacoes e persistencia.
@@ -80,9 +80,6 @@ export function validateAuthField(name, value, mode) {
 
   if (name === "password") {
     if (!fieldValue.trim()) return "Informe a senha.";
-    if (fieldValue.length > PASSWORD_MAX_LENGTH) {
-      return `A senha deve ter no maximo ${PASSWORD_MAX_LENGTH} caracteres.`;
-    }
 
     if (mode === "signup") {
       const checks = getPasswordChecks(fieldValue);

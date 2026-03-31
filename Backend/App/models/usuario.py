@@ -36,7 +36,7 @@ class Usuario(BaseModel):
     id: str = Field(..., min_length=1, max_length=64)
     nome: str = Field(..., min_length=3, max_length=120, alias="name")
     email: str = Field(..., min_length=6, max_length=254)
-    senha: str = Field(..., min_length=8, max_length=12, alias="password")
+    senha: str = Field(..., min_length=8, max_length=128, alias="password")
 
     @field_validator("nome")
     @classmethod
@@ -60,7 +60,7 @@ class Usuario(BaseModel):
         senha = value.strip()
         if not senha_forte(senha):
             raise ValueError(
-                "A senha deve ter 8-12 caracteres, com maiuscula, minuscula, numero e simbolo."
+                "A senha deve ter pelo menos 8 caracteres, com maiuscula, minuscula, numero e simbolo."
             )
         return senha
 
@@ -80,7 +80,7 @@ class UsuarioCadastro(BaseModel):
 
     nome: str = Field(..., min_length=3, max_length=120, alias="name")
     email: str = Field(..., min_length=6, max_length=254)
-    senha: str = Field(..., min_length=8, max_length=12, alias="password")
+    senha: str = Field(..., min_length=8, max_length=128, alias="password")
 
     @field_validator("nome")
     @classmethod
@@ -104,7 +104,7 @@ class UsuarioCadastro(BaseModel):
         senha = value.strip()
         if not senha_forte(senha):
             raise ValueError(
-                "A senha deve ter 8-12 caracteres, com maiuscula, minuscula, numero e simbolo."
+                "A senha deve ter pelo menos 8 caracteres, com maiuscula, minuscula, numero e simbolo."
             )
         return senha
 

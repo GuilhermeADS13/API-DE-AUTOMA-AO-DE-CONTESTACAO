@@ -25,8 +25,11 @@ load_env_file()
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from App.database import init_db, ping_database
+from App.limiter import limiter
 from App.routes import contestacao, suporte, usuario
 
 
@@ -42,6 +45,9 @@ app = FastAPI(
     title="API de Automacao de Contestacao",
     version="1.0.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

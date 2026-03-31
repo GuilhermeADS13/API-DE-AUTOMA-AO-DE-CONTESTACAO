@@ -3,7 +3,7 @@
 """Camada de acesso a dados do sistema.
 
 Este modulo centraliza:
-- configuracao de conexao PostgreSQL,
+- configuracao de conexao PostgreSQL com pool de conexoes,
 - inicializacao do schema,
 - operacoes de usuario/sessao,
 - persistencia de contestacoes.
@@ -11,6 +11,7 @@ Este modulo centraliza:
 
 import os
 import threading
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote_plus
@@ -18,21 +19,27 @@ from uuid import uuid4
 
 try:
     import psycopg2
+    import psycopg2.pool as psycopg2_pool
     from psycopg2.extras import Json as PGJsonAdapter
 except ModuleNotFoundError:
     psycopg2 = None
+    psycopg2_pool = None
     PGJsonAdapter = None
 
 DEFAULT_DATABASE_HOST = "localhost"
 DEFAULT_DATABASE_PORT = 5432
 DEFAULT_DATABASE_NAME = "contestacao_db"
 DEFAULT_DATABASE_USER = "postgres"
-DEFAULT_DATABASE_SSLMODE = "prefer"
+DEFAULT_DATABASE_SSLMODE = "require"
 DEFAULT_DATABASE_CONNECT_TIMEOUT = 5
 DEFAULT_SESSION_TTL_HOURS = 12
+DEFAULT_POOL_MIN_CONNECTIONS = 1
+DEFAULT_POOL_MAX_CONNECTIONS = 10
 
 _db_initialized = False
 _db_init_lock = threading.Lock()
+_connection_pool = None
+_pool_lock = threading.Lock()
 
 
 class DatabaseIntegrityError(Exception):
@@ -114,7 +121,7 @@ def _get_session_ttl_seconds() -> int:
 
 
 def _connect():
-    """Abre conexao com PostgreSQL validando dependencia e timeout."""
+    """Abre conexao direta com PostgreSQL (usado apenas para ping/healthcheck)."""
     if psycopg2 is None:
         raise RuntimeError(
             "Driver PostgreSQL nao encontrado. Instale `psycopg2-binary` no ambiente do backend."
@@ -139,6 +146,58 @@ def _connect():
         raise
 
 
+def _get_pool() -> "psycopg2_pool.ThreadedConnectionPool":
+    """Retorna (ou inicializa) o pool de conexoes com o banco."""
+    global _connection_pool
+
+    if psycopg2_pool is None:
+        raise RuntimeError(
+            "Driver PostgreSQL nao encontrado. Instale `psycopg2-binary` no ambiente do backend."
+        )
+
+    if _connection_pool is None:
+        with _pool_lock:
+            if _connection_pool is None:
+                database_url = _get_database_url()
+                min_conn = _safe_int(
+                    os.getenv("DATABASE_POOL_MIN", str(DEFAULT_POOL_MIN_CONNECTIONS)),
+                    DEFAULT_POOL_MIN_CONNECTIONS,
+                )
+                max_conn = _safe_int(
+                    os.getenv("DATABASE_POOL_MAX", str(DEFAULT_POOL_MAX_CONNECTIONS)),
+                    DEFAULT_POOL_MAX_CONNECTIONS,
+                )
+                timeout = _safe_int(
+                    os.getenv("DATABASE_CONNECT_TIMEOUT", str(DEFAULT_DATABASE_CONNECT_TIMEOUT)),
+                    DEFAULT_DATABASE_CONNECT_TIMEOUT,
+                )
+                _connection_pool = psycopg2_pool.ThreadedConnectionPool(
+                    min_conn,
+                    max_conn,
+                    database_url,
+                    connect_timeout=timeout,
+                )
+
+    return _connection_pool
+
+
+@contextmanager
+def _get_connection():
+    """Empresta uma conexao do pool e a devolve ao terminar (com rollback em caso de erro)."""
+    pool = _get_pool()
+    conn = pool.getconn()
+    try:
+        yield conn
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        pool.putconn(conn)
+
+
 
 def ping_database() -> None:
     """Executa um ping simples no banco para healthcheck."""
@@ -161,7 +220,7 @@ def init_db() -> None:
         if _db_initialized:
             return
 
-        with _connect() as connection:
+        with _get_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
@@ -247,7 +306,7 @@ def cleanup_sessoes_expiradas() -> int:
     _ensure_db_initialized()
     ttl_seconds = _get_session_ttl_seconds()
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -267,7 +326,7 @@ def create_usuario(user_id: str, nome: str, email: str, senha_hash: str) -> dict
     """Cria usuario e devolve payload seguro (sem senha)."""
     _ensure_db_initialized()
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             try:
                 cursor.execute(
@@ -299,7 +358,7 @@ def get_usuario_por_email(email: str) -> dict[str, str] | None:
     """Busca usuario por e-mail retornando hash de senha para login."""
     _ensure_db_initialized()
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -330,7 +389,7 @@ def create_sessao_usuario(usuario_id: str) -> str:
     cleanup_sessoes_expiradas()
     token = uuid4().hex
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -350,7 +409,7 @@ def get_sessao_ativa(token: str) -> dict[str, str] | None:
     _ensure_db_initialized()
     ttl_seconds = _get_session_ttl_seconds()
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -381,7 +440,7 @@ def revoke_sessao(token: str) -> bool:
     """Revoga sessao pelo token e devolve se havia registro."""
     _ensure_db_initialized()
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -410,7 +469,7 @@ def save_contestacao(payload: dict[str, Any], status: str, n8n_resposta: Any) ->
     except (TypeError, ValueError):
         arquivo_tamanho = None
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -484,7 +543,7 @@ def list_contestacoes_por_usuario(usuario_id: str, limit: int = 20) -> list[dict
     _ensure_db_initialized()
     safe_limit = max(1, min(int(limit), 100))
 
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -525,7 +584,7 @@ def list_contestacoes_por_usuario(usuario_id: str, limit: int = 20) -> list[dict
 def get_dashboard_cards_por_usuario(usuario_id: str) -> list[dict[str, str]]:
     """Retorna cards de resumo do dashboard calculados no PostgreSQL."""
     _ensure_db_initialized()
-    with _connect() as connection:
+    with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """

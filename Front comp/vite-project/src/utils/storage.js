@@ -9,11 +9,6 @@ export const DRAFT_STORAGE_KEY = "jurisflow:draft:v2";
  */
 export const AUTH_SESSION_STORAGE_KEY = "jurisflow:auth:session:v2";
 /**
- * Chave do modo de IA selecionado no menu superior.
- */
-export const IA_MODE_STORAGE_KEY = "jurisflow:ia:mode:v1";
-
-/**
  * Le o rascunho salvo no navegador.
  */
 export function readDraftFromStorage() {
@@ -82,20 +77,3 @@ export function clearSession() {
   window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
 }
 
-/**
- * Le modo de IA salvo pelo usuario.
- */
-export function readStoredIaMode() {
-  if (typeof window === "undefined") return "teste_gratis";
-  const raw = window.localStorage.getItem(IA_MODE_STORAGE_KEY);
-  return raw === "openai" ? "openai" : "teste_gratis";
-}
-
-/**
- * Persiste modo de IA selecionado no navegador.
- */
-export function persistIaMode(mode) {
-  if (typeof window === "undefined") return;
-  const normalized = mode === "openai" ? "openai" : "teste_gratis";
-  window.localStorage.setItem(IA_MODE_STORAGE_KEY, normalized);
-}

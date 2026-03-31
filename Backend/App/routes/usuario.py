@@ -10,6 +10,7 @@ from App.database import (
     get_usuario_por_email,
     revoke_sessao,
 )
+from App.limiter import limiter
 from App.models.usuario import UsuarioCadastro, UsuarioLogin, UsuarioLogout
 from App.security import (
     apply_session_cookie,
@@ -23,7 +24,8 @@ router = APIRouter()
 
 
 @router.post("/usuarios/cadastro", status_code=status.HTTP_201_CREATED)
-async def cadastrar_usuario(payload: UsuarioCadastro, response: Response) -> dict:
+@limiter.limit("5/minute")
+async def cadastrar_usuario(request: Request, payload: UsuarioCadastro, response: Response) -> dict:
     existente = get_usuario_por_email(payload.email)
     if existente:
         raise HTTPException(
@@ -58,7 +60,8 @@ async def cadastrar_usuario(payload: UsuarioCadastro, response: Response) -> dic
 
 
 @router.post("/usuarios/login")
-async def login_usuario(payload: UsuarioLogin, response: Response) -> dict:
+@limiter.limit("10/minute")
+async def login_usuario(request: Request, payload: UsuarioLogin, response: Response) -> dict:
     usuario = get_usuario_por_email(payload.email)
     if not usuario:
         raise HTTPException(
