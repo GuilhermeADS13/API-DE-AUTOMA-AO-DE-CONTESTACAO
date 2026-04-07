@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 DEFAULT_N8N_WEBHOOK_URL = "http://localhost:5678/webhook/contestacao"
-N8N_TIMEOUT_SECONDS = 30
+N8N_TIMEOUT_SECONDS = 130
 
 
 class N8NServiceError(Exception):

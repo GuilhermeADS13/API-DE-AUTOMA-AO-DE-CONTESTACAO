@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n          # dados do n8n (config, credenciais, banco sqlite)
+      - ./docs:/data/workflows:ro         # workflows JSON disponiveis para importar via API/UI
+    environment:
+      # ── Auth basica n8n ────────────────────────────────────────────
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+
+      # ── IA – Claude (Anthropic) ────────────────────────────────────
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-6}
+      - ANTHROPIC_BASE_URL=https://api.anthropic.com
+      - ANTHROPIC_VERSION=2023-06-01
+      - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-4096}
+      - CLAUDE_TEMPERATURE=${CLAUDE_TEMPERATURE:-0.12}
+      - CLAUDE_TIMEOUT_MS=${CLAUDE_TIMEOUT_MS:-45000}
+
+      # ── IA – OpenAI (fallback, opcional) ──────────────────────────
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+
+      # ── Supabase ───────────────────────────────────────────────────
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
+
+      # ── Banco PostgreSQL (Supabase pooler) ────────────────────────
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DATABASE_HOST}
+      - DB_POSTGRESDB_PORT=${DATABASE_PORT:-6543}
+      - DB_POSTGRESDB_DATABASE=${DATABASE_NAME:-postgres}
+      - DB_POSTGRESDB_USER=${DATABASE_USER}
+      - DB_POSTGRESDB_PASSWORD=${DATABASE_PASSWORD}
+      - DB_POSTGRESDB_SSL=true
+      - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+
+      # ── n8n host / webhook ─────────────────────────────────────────
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - N8N_LOG_LEVEL=info
+
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  n8n_data:
+    name: autojuri_n8n_data

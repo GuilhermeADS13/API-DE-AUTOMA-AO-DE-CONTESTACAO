@@ -155,6 +155,7 @@ export default function App() {
 
   const [liveDraft, setLiveDraft] = useState("");
   const [liveDraftTouched, setLiveDraftTouched] = useState(false);
+  const [iaResult, setIaResult] = useState(null);
   // Estados dedicados ao fluxo de suporte/reclamacoes.
   const [supportForm, setSupportForm] = useState(() => ({
     nome: authUser?.name || "",
@@ -984,20 +985,25 @@ export default function App() {
         setLastCaseId(backendData.id_caso.trim());
       }
 
+      const engine = workflowData?.engine_ia || {};
+      const riscos = Array.isArray(workflowData?.minuta?.riscos) ? workflowData.minuta.riscos : [];
+      const arquivoB64 = typeof workflowData?.arquivo_editado_base64 === "string" ? workflowData.arquivo_editado_base64 : "";
+      const arquivoNome = workflowData?.arquivo_editado_nome || "contestacao.txt";
+      const defesasConsultadas = workflowData?.defesas_anteriores?.consultadas ?? 0;
+      setIaResult({ engine, riscos, arquivoB64, arquivoNome, defesasConsultadas });
+
       setLoading(false);
       setSubmitted(true);
       setShowResultModal(true);
       setAutomationStatus({ webhook: 100, ia: 86, validacao: 92 });
-      const rulesAppliedCount = Array.isArray(workflowData?.regras_aplicadas)
-        ? workflowData.regras_aplicadas.length
-        : 0;
+
+      const providerLabel =
+        engine?.provider === "claude" ? "Claude (Anthropic)" :
+        engine?.provider === "openai" ? "OpenAI" : "Agente IA";
 
       setFeedback({
         variant: "success",
-        text:
-          rulesAppliedCount > 0
-            ? `Caso enviado ao agente com sucesso. Defesa pronta para revisao (${rulesAppliedCount} regras aplicadas).`
-            : "Caso enviado ao agente de IA com sucesso. Defesa pronta para revisao.",
+        text: `Defesa gerada por ${providerLabel}${defesasConsultadas > 0 ? ` com ${defesasConsultadas} defesa(s) anterior(es) consultada(s)` : ""}. Pronta para revisao.`,
       });
       await loadDashboardData({ silent: true });
       setCurrentPage("dashboard");
@@ -1203,18 +1209,61 @@ export default function App() {
         dialogClassName="platform-modal"
       >
         <Modal.Header closeButton>
-          <Modal.Title>Envio concluido</Modal.Title>
+          <Modal.Title>Defesa gerada com sucesso</Modal.Title>
         </Modal.Header>
 
         <Modal.Body>
-          Sua defesa foi processada com sucesso. O texto esta disponivel na
-          pagina de dashboard para revisao e exportacao.
+          <p className="mb-2">
+            Contestacao processada por{" "}
+            <strong>
+              {iaResult?.engine?.provider === "claude"
+                ? `Claude (${iaResult.engine.model || "Anthropic"})`
+                : iaResult?.engine?.provider === "openai"
+                ? `OpenAI (${iaResult.engine.model || "GPT"})`
+                : "Agente IA (fallback local)"}
+            </strong>
+            {iaResult?.defesasConsultadas > 0 && (
+              <span className="text-muted">
+                {" "}— {iaResult.defesasConsultadas} defesa(s) anterior(es) consultada(s)
+              </span>
+            )}
+          </p>
+          {iaResult?.riscos?.length > 0 && (
+            <div className="mt-2">
+              <small className="text-warning fw-semibold">Pontos de atencao:</small>
+              <ul className="mb-0 mt-1" style={{ fontSize: "0.85rem" }}>
+                {iaResult.riscos.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="mt-3 mb-0 text-muted" style={{ fontSize: "0.9rem" }}>
+            O texto completo esta disponivel no dashboard para revisao e exportacao.
+          </p>
         </Modal.Body>
 
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowResultModal(false)}>
             Fechar
           </Button>
+
+          {iaResult?.arquivoB64 && (
+            <Button
+              variant="outline-light"
+              onClick={() => {
+                const bytes = Uint8Array.from(atob(iaResult.arquivoB64), c => c.charCodeAt(0));
+                const blob = new Blob([bytes], { type: "text/plain;charset=utf-8" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = iaResult.arquivoNome || "contestacao.txt";
+                link.click();
+                URL.revokeObjectURL(link.href);
+              }}
+            >
+              Baixar minuta (.txt)
+            </Button>
+          )}
 
           <Button
             variant="dark"
