@@ -1,4 +1,5 @@
 # Ponto de entrada da API FastAPI com middlewares, rotas e healthchecks.
+import logging
 import os
 from pathlib import Path
 
@@ -22,6 +23,14 @@ def load_env_file() -> None:
 
 
 load_env_file()
+
+# Configuracao de logging estruturado para observabilidade em producao.
+# Formato: timestamp | nivel | logger | mensagem
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,8 +63,8 @@ app.add_middleware(
     allow_origins=parse_frontend_origins(),
     # Necessario para trafegar cookie HTTPOnly de sessao entre front e backend.
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(contestacao.router, prefix="/api", tags=["Contestacao"])

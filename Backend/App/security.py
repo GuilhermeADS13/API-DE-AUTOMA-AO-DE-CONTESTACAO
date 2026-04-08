@@ -1,6 +1,7 @@
 """Utilitarios de autenticacao/sessao para rotas FastAPI."""
 
 import json
+import logging
 import os
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -9,6 +10,8 @@ from urllib.request import Request as UrlRequest, urlopen
 from fastapi import Header, HTTPException, Request, Response, status
 
 from App.database import get_sessao_ativa
+
+logger = logging.getLogger(__name__)
 
 # Nome do cookie de sessao enviado ao navegador.
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "contestacao_session")
@@ -113,12 +116,25 @@ def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
             body = response.read()
     except HTTPError as error:
         if error.code in {401, 403}:
+            # Token rejeitado pelo Supabase: log em info para auditoria sem
+            # poluir o canal de erro. NUNCA logamos o token em si.
+            logger.info("Supabase rejeitou bearer token (status=%s)", error.code)
             return None
+        logger.error(
+            "Erro HTTP ao validar token no Supabase: status=%s msg=%s",
+            error.code,
+            error.reason,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Falha ao validar token no Supabase.",
         ) from error
     except (URLError, TimeoutError, OSError) as error:
+        logger.error(
+            "Indisponibilidade ao consultar Supabase Auth: %s: %s",
+            type(error).__name__,
+            error,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Nao foi possivel validar autenticacao no Supabase.",
@@ -126,10 +142,15 @@ def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
 
     try:
         payload = json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        logger.warning(
+            "Resposta nao-JSON do Supabase Auth: %s",
+            type(error).__name__,
+        )
         return None
 
     if not isinstance(payload, dict):
+        logger.warning("Resposta inesperada do Supabase Auth (tipo=%s)", type(payload).__name__)
         return None
 
     return _build_supabase_user(payload)

@@ -884,6 +884,9 @@ export default function App() {
     // Valida formulario, serializa arquivo em base64 e envia payload completo ao backend.
     event.preventDefault();
 
+    // Guard contra double-submit: ignora cliques enquanto request anterior nao terminou.
+    if (loading) return;
+
     if (!authUser) {
       setFeedback({
         variant: "warning",

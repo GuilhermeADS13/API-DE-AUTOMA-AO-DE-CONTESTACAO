@@ -4,8 +4,13 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-# Regex basica de e-mail utilizada em cadastro/login.
-EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", re.IGNORECASE)
+# Regex de e-mail mais restritiva: nao aceita TLD de 1 caractere, varios @,
+# nem caracteres de controle. NAO substitui RFC 5322 completo, mas filtra a
+# maior parte dos invalidos sem precisar de dependencia externa.
+EMAIL_REGEX = re.compile(
+    r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$"
+)
 
 
 def normalizar_email(email: str) -> str:

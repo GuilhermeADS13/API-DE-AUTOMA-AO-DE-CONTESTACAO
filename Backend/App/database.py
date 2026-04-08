@@ -11,6 +11,7 @@ Este modulo centraliza:
 
 import os
 import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
@@ -40,6 +41,25 @@ _db_initialized = False
 _db_init_lock = threading.Lock()
 _connection_pool = None
 _pool_lock = threading.Lock()
+
+# Cache em-memoria de sessoes validadas para evitar JOIN no Postgres a cada request.
+# Chave = token; valor = (expira_em_epoch, payload_dict). Reduz pressao no DB para
+# fluxos curtos do dashboard sem comprometer revogacao (TTL curto, default 60s).
+_session_cache: dict[str, tuple[float, dict[str, str]]] = {}
+_session_cache_lock = threading.Lock()
+
+
+def _get_session_cache_ttl_seconds() -> int:
+    return _safe_int(os.getenv("SESSION_CACHE_TTL_SECONDS"), 60)
+
+
+def _invalidate_session_cache(token: str | None = None) -> None:
+    """Limpa cache: remove um token especifico ou tudo."""
+    with _session_cache_lock:
+        if token is None:
+            _session_cache.clear()
+        else:
+            _session_cache.pop(token, None)
 
 
 class DatabaseIntegrityError(Exception):
@@ -301,24 +321,39 @@ def _ensure_db_initialized() -> None:
 
 
 
-def cleanup_sessoes_expiradas() -> int:
-    """Remove sessoes expiradas e retorna quantidade removida."""
+def cleanup_sessoes_expiradas(batch_size: int = 1000, max_batches: int = 50) -> int:
+    """Remove sessoes expiradas em lotes para nao bloquear a tabela em produzao.
+
+    Cada chamada do login dispara este cleanup; com 100k+ sessoes expiradas,
+    um DELETE unico segura lock prolongado e prejudica logins concorrentes.
+    Por isso deletamos em batches limitados (default 1000 linhas, ate 50 lotes
+    por execucao = 50k registros). O restante e tratado na proxima chamada.
+    """
     _ensure_db_initialized()
     ttl_seconds = _get_session_ttl_seconds()
+    total_deleted = 0
 
     with _get_connection() as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                DELETE FROM usuarios_sessoes
-                WHERE criado_em < (NOW() - (%s * INTERVAL '1 second'))
-                """,
-                (ttl_seconds,),
-            )
-            deleted_rows = cursor.rowcount or 0
-        connection.commit()
+            for _ in range(max_batches):
+                cursor.execute(
+                    """
+                    DELETE FROM usuarios_sessoes
+                    WHERE token IN (
+                        SELECT token FROM usuarios_sessoes
+                        WHERE criado_em < (NOW() - (%s * INTERVAL '1 second'))
+                        LIMIT %s
+                    )
+                    """,
+                    (ttl_seconds, batch_size),
+                )
+                deleted_rows = cursor.rowcount or 0
+                connection.commit()
+                total_deleted += int(deleted_rows)
+                if deleted_rows < batch_size:
+                    break
 
-    return int(deleted_rows)
+    return total_deleted
 
 
 
@@ -405,7 +440,25 @@ def create_sessao_usuario(usuario_id: str) -> str:
 
 
 def get_sessao_ativa(token: str) -> dict[str, str] | None:
-    """Valida token de sessao considerando expiracao por TTL."""
+    """Valida token de sessao considerando expiracao por TTL.
+
+    Usa cache em-memoria com TTL curto (default 60s) para evitar JOIN no
+    Postgres a cada request autenticada. O TTL e curto o bastante para que
+    revogacoes via /usuarios/logout sejam refletidas em <=60s mesmo que o
+    invalidate sincrono falhe.
+    """
+    if not token:
+        return None
+
+    cache_ttl = _get_session_cache_ttl_seconds()
+    now_epoch = time.monotonic()
+
+    if cache_ttl > 0:
+        with _session_cache_lock:
+            cached = _session_cache.get(token)
+            if cached and cached[0] > now_epoch:
+                return dict(cached[1])
+
     _ensure_db_initialized()
     ttl_seconds = _get_session_ttl_seconds()
 
@@ -425,14 +478,23 @@ def get_sessao_ativa(token: str) -> dict[str, str] | None:
             row = cursor.fetchone()
 
     if row is None:
+        # Garante que cache nao serve sessao recem-revogada/expirada.
+        if cache_ttl > 0:
+            _invalidate_session_cache(token)
         return None
 
-    return {
+    payload = {
         "id": str(row[0]),
         "nome": str(row[1]),
         "email": str(row[2]),
         "token": str(row[3]),
     }
+
+    if cache_ttl > 0:
+        with _session_cache_lock:
+            _session_cache[token] = (now_epoch + cache_ttl, dict(payload))
+
+    return payload
 
 
 
@@ -452,6 +514,9 @@ def revoke_sessao(token: str) -> bool:
             )
             row = cursor.fetchone()
         connection.commit()
+
+    # Sincroniza cache para nao servir sessao revogada ate o TTL expirar.
+    _invalidate_session_cache(token)
 
     return row is not None
 

@@ -1,10 +1,13 @@
 # Servico de integracao com webhook do n8n para disparo de workflows de contestacao.
 import asyncio
 import json
+import logging
 import os
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_N8N_WEBHOOK_URL = "http://localhost:5678/webhook/contestacao"
 N8N_TIMEOUT_SECONDS = 130
@@ -43,16 +46,30 @@ def _enviar_para_n8n_sync(dados: dict[str, Any]) -> Any:
         with urlopen(request, timeout=N8N_TIMEOUT_SECONDS) as response:
             response_body = response.read()
     except (HTTPError, URLError, TimeoutError, OSError) as error:
+        # Log estruturado do erro original (URL + tipo de excecao) para debug em producao.
+        # NUNCA logamos auth_token nem o body do payload (PII).
+        logger.error(
+            "Falha ao acionar n8n em %s: %s: %s",
+            webhook_url,
+            type(error).__name__,
+            error,
+        )
         raise N8NServiceError(
             f"Falha ao acionar o n8n em {webhook_url}. Verifique se o workflow esta ativo."
         ) from error
 
     if not response_body:
+        logger.warning("n8n respondeu sem corpo em %s", webhook_url)
         return {"message": "Workflow acionado sem corpo de resposta."}
 
     try:
         return json.loads(response_body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        logger.warning(
+            "n8n retornou payload nao-JSON de %s: %s",
+            webhook_url,
+            type(error).__name__,
+        )
         return {"raw_response": response_body.decode("utf-8", errors="replace")}
 
 

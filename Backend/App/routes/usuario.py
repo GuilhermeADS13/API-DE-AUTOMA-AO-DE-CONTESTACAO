@@ -1,4 +1,5 @@
 # Rotas HTTP de autenticacao de usuario (cadastro, login, logout e sessao).
+import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -20,14 +21,26 @@ from App.security import (
 )
 from App.services.auth_service import hash_password, verify_password
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _client_ip(request: Request) -> str:
+    """IP da requisicao para auditoria de tentativas de login."""
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    return request.client.host if request.client else "unknown"
 
 
 @router.post("/usuarios/cadastro", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def cadastrar_usuario(request: Request, payload: UsuarioCadastro, response: Response) -> dict:
+    client_ip = _client_ip(request)
     existente = get_usuario_por_email(payload.email)
     if existente:
+        logger.info("Tentativa de cadastro com email duplicado de ip=%s", client_ip)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ja existe uma conta com este e-mail.",
@@ -44,6 +57,11 @@ async def cadastrar_usuario(request: Request, payload: UsuarioCadastro, response
             senha_hash=senha_hash,
         )
     except DatabaseIntegrityError as error:
+        logger.warning(
+            "Conflito de integridade no cadastro: ip=%s erro=%s",
+            client_ip,
+            error,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ja existe uma conta com este e-mail.",
@@ -51,6 +69,8 @@ async def cadastrar_usuario(request: Request, payload: UsuarioCadastro, response
 
     token = create_sessao_usuario(usuario["id"])
     apply_session_cookie(response, token)
+    # Auditoria: nao logamos email completo para minimizar PII em logs.
+    logger.info("Cadastro concluido: usuario_id=%s ip=%s", usuario["id"], client_ip)
 
     return {
         "status": "sucesso",
@@ -62,8 +82,11 @@ async def cadastrar_usuario(request: Request, payload: UsuarioCadastro, response
 @router.post("/usuarios/login")
 @limiter.limit("10/minute")
 async def login_usuario(request: Request, payload: UsuarioLogin, response: Response) -> dict:
+    client_ip = _client_ip(request)
     usuario = get_usuario_por_email(payload.email)
     if not usuario:
+        # Loga falha sem expor o email para evitar enumeracao em caso de leak de log.
+        logger.warning("Falha de login (usuario inexistente) ip=%s", client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais invalidas.",
@@ -71,6 +94,11 @@ async def login_usuario(request: Request, payload: UsuarioLogin, response: Respo
 
     senha_ok = verify_password(payload.senha, usuario["senha_hash"])
     if not senha_ok:
+        logger.warning(
+            "Falha de login (senha incorreta) usuario_id=%s ip=%s",
+            usuario["id"],
+            client_ip,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais invalidas.",
@@ -78,6 +106,7 @@ async def login_usuario(request: Request, payload: UsuarioLogin, response: Respo
 
     token = create_sessao_usuario(usuario["id"])
     apply_session_cookie(response, token)
+    logger.info("Login bem sucedido usuario_id=%s ip=%s", usuario["id"], client_ip)
 
     return {
         "status": "sucesso",

@@ -9,6 +9,20 @@ export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"];
 
 /**
+ * MIME types correspondentes. Browsers preenchem `file.type` a partir do
+ * proprio arquivo (Content-Type sniffing), entao validar aqui evita o caso
+ * trivial de renomear .exe para .pdf. Validacao definitiva continua no backend.
+ */
+export const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  // Alguns navegadores deixam vazio para .doc/.docx; aceitamos para nao
+  // bloquear usuarios legitimos. O backend ainda precisa validar magic bytes.
+  "",
+]);
+
+/**
  * Normaliza nome para exportacao local de arquivo.
  */
 export function normalizeFileName(value) {
@@ -28,6 +42,10 @@ export function validateFile(file) {
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     return "Formato invalido. Envie apenas DOCX, DOC ou PDF.";
+  }
+  // Verifica MIME alem da extensao para barrar renomeacoes triviais (.exe -> .pdf).
+  if (!ALLOWED_MIME_TYPES.has(file.type || "")) {
+    return "Tipo de arquivo nao reconhecido. Envie um DOCX, DOC ou PDF valido.";
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return "Arquivo muito grande. Limite de 10MB.";
