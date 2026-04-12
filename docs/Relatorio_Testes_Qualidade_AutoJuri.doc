@@ -1,0 +1,443 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 15">
+<meta name="Originator" content="Microsoft Word 15">
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+  @page {
+    size: A4;
+    margin: 2.5cm 2.5cm 2.5cm 3cm;
+  }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    text-align: justify;
+  }
+  h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 0pt;
+    margin-bottom: 6pt;
+    color: #1a1a2e;
+  }
+  h2 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 18pt;
+    margin-bottom: 6pt;
+    color: #16213e;
+    border-bottom: 2px solid #16213e;
+    padding-bottom: 4pt;
+  }
+  h3 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 12pt;
+    margin-bottom: 4pt;
+    color: #1a1a2e;
+  }
+  p {
+    margin-top: 0pt;
+    margin-bottom: 6pt;
+    text-align: justify;
+  }
+  .capa-titulo {
+    font-size: 22pt;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 120pt;
+    color: #1a1a2e;
+  }
+  .capa-subtitulo {
+    font-size: 14pt;
+    text-align: center;
+    margin-top: 12pt;
+    color: #444;
+  }
+  .capa-info {
+    font-size: 12pt;
+    text-align: center;
+    margin-top: 80pt;
+    color: #333;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 8pt;
+    margin-bottom: 12pt;
+    font-size: 11pt;
+  }
+  th {
+    background-color: #16213e;
+    color: #fff;
+    padding: 6pt 8pt;
+    border: 1px solid #16213e;
+    text-align: center;
+    font-weight: bold;
+  }
+  td {
+    padding: 5pt 8pt;
+    border: 1px solid #ccc;
+    text-align: center;
+  }
+  tr:nth-child(even) td {
+    background-color: #f2f2f2;
+  }
+  .highlight-green {
+    color: #217346;
+    font-weight: bold;
+  }
+  .highlight-yellow {
+    color: #b8860b;
+    font-weight: bold;
+  }
+  .code-block {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 8pt;
+    margin: 6pt 0;
+    line-height: 1.3;
+  }
+  ul { margin-top: 4pt; margin-bottom: 8pt; }
+  li { margin-bottom: 4pt; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================== -->
+<!-- CAPA -->
+<!-- ================================================================== -->
+<div style="text-align:center;">
+  <p class="capa-titulo">Relat&oacute;rio de Testes Unit&aacute;rios e<br>Cobertura de C&oacute;digo</p>
+  <p class="capa-subtitulo">Projeto AutoJuri &mdash; Frontend de Automa&ccedil;&atilde;o de Contesta&ccedil;&otilde;es Jur&iacute;dicas</p>
+  <br><br>
+  <p class="capa-subtitulo"><b>Disciplina:</b> Teste e Qualidade de Software</p>
+  <p class="capa-info">
+    <b>Aluno:</b> Guilherme Maciel<br><br>
+    <b>Reposit&oacute;rio:</b> API-DE-AUTOMA-AO-DE-CONTESTACAO<br><br>
+    <b>Tecnologias:</b> React 19 &bull; Vite 7 &bull; Vitest 3 &bull; V8 Coverage<br><br>
+    <b>Data:</b> 12 de Abril de 2026
+  </p>
+</div>
+
+<!-- ================================================================== -->
+<!-- SEÇÃO 1 — PASTA / DIRETÓRIO CONTENDO OS TESTES -->
+<!-- ================================================================== -->
+<div class="page-break"></div>
+
+<h1>1. Pasta e Diret&oacute;rio Contendo os Testes</h1>
+
+<h2>1.1 Estrutura do Projeto</h2>
+
+<p>O projeto AutoJuri &eacute; uma aplica&ccedil;&atilde;o web de automa&ccedil;&atilde;o de contesta&ccedil;&otilde;es jur&iacute;dicas, constru&iacute;da com React 19 e Vite 7. A l&oacute;gica de neg&oacute;cio test&aacute;vel est&aacute; concentrada no diret&oacute;rio <b>src/utils/</b>, que cont&eacute;m fun&ccedil;&otilde;es puras respons&aacute;veis por valida&ccedil;&otilde;es, formata&ccedil;&otilde;es e opera&ccedil;&otilde;es de persist&ecirc;ncia local.</p>
+
+<p>Os testes unit&aacute;rios seguem a conven&ccedil;&atilde;o de <i>co-location</i>, ficando no mesmo diret&oacute;rio dos m&oacute;dulos testados, com o sufixo <b>.test.js</b>:</p>
+
+<div class="code-block">
+Front comp/vite-project/<br>
+&nbsp;&nbsp;src/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;utils/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>validators.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; Valida&ccedil;&atilde;o de e-mail, senha, CNJ e campos de auth<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>validators.test.js</b>&nbsp;&rarr; 65 testes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>cases.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; Gera&ccedil;&atilde;o de ID incremental de caso jur&iacute;dico<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>cases.test.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; 7 testes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>html.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; Escape de caracteres HTML (prote&ccedil;&atilde;o XSS)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>html.test.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; 11 testes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>files.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; Valida&ccedil;&atilde;o de upload, normaliza&ccedil;&atilde;o de nome<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>files.test.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; 23 testes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>storage.js</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; Persist&ecirc;ncia de rascunho e sess&atilde;o no localStorage<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>storage.test.js</b>&nbsp;&nbsp;&nbsp;&rarr; 15 testes<br>
+</div>
+
+<h2>1.2 M&oacute;dulo Selecionado e Justificativa</h2>
+
+<p>O m&oacute;dulo <b>src/utils/</b> foi selecionado por conter toda a l&oacute;gica de neg&oacute;cio do frontend, incluindo:</p>
+<ul>
+  <li><b>validators.js:</b> Regras de valida&ccedil;&atilde;o de formul&aacute;rios de autenti-ca&ccedil;&atilde;o (e-mail, senha com requisitos de for&ccedil;a, n&uacute;mero de processo CNJ) e extra&ccedil;&atilde;o de mensagens de erro da API;</li>
+  <li><b>files.js:</b> Valida&ccedil;&atilde;o de upload de pe&ccedil;as processuais (extens&atilde;o, MIME type, limite de tamanho) e normaliza&ccedil;&atilde;o de nomes para exporta&ccedil;&atilde;o;</li>
+  <li><b>storage.js:</b> Persist&ecirc;ncia segura de rascunhos e sess&otilde;es no navegador, garantindo que dados sens&iacute;veis como tokens n&atilde;o sejam armazenados;</li>
+  <li><b>cases.js:</b> Gera&ccedil;&atilde;o de identificadores &uacute;nicos para casos no dashboard;</li>
+  <li><b>html.js:</b> Sanitiza&ccedil;&atilde;o de strings para preven&ccedil;&atilde;o de ataques XSS.</li>
+</ul>
+
+<p>Essas fun&ccedil;&otilde;es s&atilde;o ideais para testes unit&aacute;rios por serem predominantemente <b>fun&ccedil;&otilde;es puras</b> (sem efeitos colaterais al&eacute;m do localStorage) e por representarem regras cr&iacute;ticas de seguran&ccedil;a e integridade de dados da aplica&ccedil;&atilde;o.</p>
+
+<h2>1.3 Ferramentas Utilizadas</h2>
+
+<table>
+  <tr>
+    <th>Ferramenta</th>
+    <th>Vers&atilde;o</th>
+    <th>Finalidade</th>
+  </tr>
+  <tr>
+    <td>Vitest</td>
+    <td>3.2.4</td>
+    <td>Framework de testes unit&aacute;rios (compat&iacute;vel com Vite)</td>
+  </tr>
+  <tr>
+    <td>@vitest/coverage-v8</td>
+    <td>3.2.4</td>
+    <td>Provedor de cobertura de c&oacute;digo (engine V8)</td>
+  </tr>
+  <tr>
+    <td>Node.js</td>
+    <td>24.x</td>
+    <td>Runtime de execu&ccedil;&atilde;o dos testes</td>
+  </tr>
+</table>
+
+<h2>1.4 Como Executar</h2>
+
+<div class="code-block">
+# Instalar depend&ecirc;ncias<br>
+npm install<br><br>
+# Executar todos os testes<br>
+npm test<br><br>
+# Executar com relat&oacute;rio de cobertura<br>
+npm run test:coverage<br><br>
+# Modo watch (desenvolvimento)<br>
+npm run test:watch
+</div>
+
+<!-- ================================================================== -->
+<!-- SEÇÃO 2 — RELATÓRIO DE COBERTURA DE CÓDIGO -->
+<!-- ================================================================== -->
+<div class="page-break"></div>
+
+<h1>2. Relat&oacute;rio de Cobertura de C&oacute;digo</h1>
+
+<h2>2.1 Resumo Geral</h2>
+
+<p>A cobertura foi gerada com o provedor <b>V8</b> do Vitest, que instrumenta o c&oacute;digo diretamente na engine JavaScript. Os resultados refletem a execu&ccedil;&atilde;o de <b>121 testes</b> distribu&iacute;dos em <b>5 arquivos de teste</b>, todos passando com sucesso.</p>
+
+<table>
+  <tr>
+    <th>M&eacute;trica</th>
+    <th>Resultado</th>
+  </tr>
+  <tr>
+    <td>Total de testes</td>
+    <td><b>121</b></td>
+  </tr>
+  <tr>
+    <td>Testes passando</td>
+    <td class="highlight-green">121 (100%)</td>
+  </tr>
+  <tr>
+    <td>Testes falhando</td>
+    <td>0</td>
+  </tr>
+  <tr>
+    <td>Arquivos de teste</td>
+    <td>5</td>
+  </tr>
+  <tr>
+    <td>Tempo de execu&ccedil;&atilde;o</td>
+    <td>1.34s</td>
+  </tr>
+</table>
+
+<h2>2.2 Cobertura por Arquivo</h2>
+
+<table>
+  <tr>
+    <th>Arquivo</th>
+    <th>Statements</th>
+    <th>Branches</th>
+    <th>Functions</th>
+    <th>Lines</th>
+    <th>Linhas N&atilde;o Cobertas</th>
+  </tr>
+  <tr>
+    <td><b>validators.js</b></td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td>&mdash;</td>
+  </tr>
+  <tr>
+    <td><b>cases.js</b></td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td>&mdash;</td>
+  </tr>
+  <tr>
+    <td><b>html.js</b></td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">100%</td>
+    <td>&mdash;</td>
+  </tr>
+  <tr>
+    <td><b>files.js</b></td>
+    <td class="highlight-yellow">83,07%</td>
+    <td class="highlight-yellow">86,66%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-yellow">83,07%</td>
+    <td>63&ndash;73</td>
+  </tr>
+  <tr>
+    <td><b>storage.js</b></td>
+    <td class="highlight-green">97,14%</td>
+    <td class="highlight-yellow">80%</td>
+    <td class="highlight-green">100%</td>
+    <td class="highlight-green">97,14%</td>
+    <td>16&ndash;17</td>
+  </tr>
+  <tr style="background-color: #e8f5e9;">
+    <td><b>TOTAL</b></td>
+    <td><b>94,69%</b></td>
+    <td><b>91,76%</b></td>
+    <td><b>100%</b></td>
+    <td><b>94,69%</b></td>
+    <td>&mdash;</td>
+  </tr>
+</table>
+
+<h2>2.3 Distribui&ccedil;&atilde;o de Testes por M&oacute;dulo</h2>
+
+<table>
+  <tr>
+    <th>Arquivo de Teste</th>
+    <th>Qtd. Testes</th>
+    <th>Tipo de Cen&aacute;rios Cobertos</th>
+  </tr>
+  <tr>
+    <td>validators.test.js</td>
+    <td><b>65</b></td>
+    <td>E-mail, senha, CNJ, campos de auth, erros de API</td>
+  </tr>
+  <tr>
+    <td>files.test.js</td>
+    <td><b>23</b></td>
+    <td>Extens&atilde;o, MIME, tamanho, normaliza&ccedil;&atilde;o, constantes</td>
+  </tr>
+  <tr>
+    <td>storage.test.js</td>
+    <td><b>15</b></td>
+    <td>Rascunho, sess&atilde;o, JSON inv&aacute;lido, seguran&ccedil;a de dados</td>
+  </tr>
+  <tr>
+    <td>html.test.js</td>
+    <td><b>11</b></td>
+    <td>Escape de caracteres, XSS com script/onerror</td>
+  </tr>
+  <tr>
+    <td>cases.test.js</td>
+    <td><b>7</b></td>
+    <td>ID incremental, padding, ano fict&iacute;cio, formato inv&aacute;lido</td>
+  </tr>
+</table>
+
+<h2>2.4 An&aacute;lise das Linhas N&atilde;o Cobertas</h2>
+
+<h3>files.js &mdash; Linhas 63 a 73 (fun&ccedil;&atilde;o readFileAsBase64)</h3>
+<p>A fun&ccedil;&atilde;o <code>readFileAsBase64</code> utiliza a API <code>FileReader</code> do navegador para converter arquivos em base64. Como os testes rodam em ambiente Node.js (sem DOM real), n&atilde;o &eacute; poss&iacute;vel instanciar um <code>FileReader</code> nativo. Os caminhos de <b>null/undefined</b> foram cobertos, mas o fluxo principal exigiria um ambiente <b>jsdom</b> ou <b>happy-dom</b> com mock de <code>FileReader</code>.</p>
+
+<h3>storage.js &mdash; Linhas 16 a 17 (guarda typeof window)</h3>
+<p>O branch <code>typeof window === "undefined"</code> protege o c&oacute;digo contra execu&ccedil;&atilde;o em ambientes server-side (SSR). Como o ambiente de teste possui <code>globalThis.window</code> definido, o caminho do retorno antecipado n&atilde;o &eacute; atingido. Trata-se de uma guarda defensiva cujo teste exigiria manipula&ccedil;&atilde;o do objeto global entre execu&ccedil;&otilde;es.</p>
+
+<!-- ================================================================== -->
+<!-- SEÇÃO 3 — ANÁLISE CRÍTICA -->
+<!-- ================================================================== -->
+<div class="page-break"></div>
+
+<h1>3. An&aacute;lise Cr&iacute;tica</h1>
+
+<h2>3.1 Qualidade dos Testes Implementados</h2>
+
+<p>Os 121 testes unit&aacute;rios foram estruturados seguindo o padr&atilde;o <b>AAA</b> (Arrange&ndash;Act&ndash;Assert), com nomenclatura descritiva em portugu&ecirc;s que facilita a compreens&atilde;o do comportamento esperado de cada fun&ccedil;&atilde;o. A su&iacute;te cobre tr&ecirc;s categorias fundamentais de cen&aacute;rios:</p>
+
+<ul>
+  <li><b>Cen&aacute;rios principais (happy path):</b> Valida&ccedil;&atilde;o de e-mails v&aacute;lidos, senhas fortes, n&uacute;meros CNJ no formato correto, upload de arquivos PDF/DOC/DOCX dentro do limite, persist&ecirc;ncia e recupera&ccedil;&atilde;o de rascunhos e sess&otilde;es;</li>
+  <li><b>Casos de erro:</b> E-mails mal formatados, senhas que n&atilde;o atendem aos requisitos de for&ccedil;a, JSON inv&aacute;lido retornado pela API, campos obrigat&oacute;rios vazios, arquivos com extens&atilde;o proibida ou MIME type incorreto;</li>
+  <li><b>Casos de limite (edge cases):</b> Valores <code>null</code> e <code>undefined</code> em todas as fun&ccedil;&otilde;es, strings contendo apenas espa&ccedil;os, arquivo exatamente no limite de 10MB, senha no limite m&aacute;ximo de 128 caracteres, IDs com formato corrompido (NaN), prote&ccedil;&atilde;o contra XSS com payloads reais (<code>&lt;script&gt;</code>, <code>onerror</code>).</li>
+</ul>
+
+<p>Um ponto de destaque &eacute; o teste de <b>seguran&ccedil;a</b> em <code>persistSession</code>, que verifica que tokens sens&iacute;veis n&atilde;o s&atilde;o persistidos no localStorage &mdash; um requisito cr&iacute;tico para uma aplica&ccedil;&atilde;o jur&iacute;dica que lida com dados de clientes.</p>
+
+<h2>3.2 Avalia&ccedil;&atilde;o da Cobertura Atingida</h2>
+
+<p>A cobertura geral de <b>94,69% de statements</b> e <b>100% de functions</b> indica que praticamente toda a l&oacute;gica de neg&oacute;cio test&aacute;vel foi exercitada. Tr&ecirc;s dos cinco m&oacute;dulos atingiram <b>100% em todas as m&eacute;tricas</b> (validators, cases, html), o que demonstra cobertura completa das regras mais cr&iacute;ticas do sistema.</p>
+
+<p>A cobertura de <b>branches em 91,76%</b> reflete a dificuldade t&eacute;cnica de simular certos ambientes no Node.js: a guarda <code>typeof window</code> em <code>storage.js</code> e o fluxo do <code>FileReader</code> em <code>files.js</code>. Essas lacunas s&atilde;o justific&aacute;veis e n&atilde;o representam risco real, pois os branches n&atilde;o cobertos s&atilde;o guardas defensivas de ambiente, n&atilde;o l&oacute;gica de neg&oacute;cio.</p>
+
+<h2>3.3 Lacunas Identificadas</h2>
+
+<table>
+  <tr>
+    <th>Lacuna</th>
+    <th>Impacto</th>
+    <th>Justificativa</th>
+  </tr>
+  <tr>
+    <td style="text-align:left;"><b>readFileAsBase64</b> &mdash; fluxo principal n&atilde;o coberto</td>
+    <td>M&eacute;dio</td>
+    <td style="text-align:left;">Depende de <code>FileReader</code> (API de browser). Exigiria ambiente jsdom com mock, ou testes E2E.</td>
+  </tr>
+  <tr>
+    <td style="text-align:left;"><b>Guarda SSR</b> (<code>typeof window</code>) n&atilde;o exercitada</td>
+    <td>Baixo</td>
+    <td style="text-align:left;">C&oacute;digo defensivo para SSR. A aplica&ccedil;&atilde;o &eacute; SPA e n&atilde;o usa renderiza&ccedil;&atilde;o server-side.</td>
+  </tr>
+  <tr>
+    <td style="text-align:left;"><b>Componentes React</b> n&atilde;o testados</td>
+    <td>M&eacute;dio</td>
+    <td style="text-align:left;">Fora do escopo (l&oacute;gica de apresenta&ccedil;&atilde;o). Recomendado para fase futura com React Testing Library.</td>
+  </tr>
+  <tr>
+    <td style="text-align:left;"><b>Integra&ccedil;&atilde;o com Supabase</b> n&atilde;o testada</td>
+    <td>Alto</td>
+    <td style="text-align:left;">A comunica&ccedil;&atilde;o com o backend via Supabase n&atilde;o possui testes. Requer mocks ou ambiente de staging.</td>
+  </tr>
+</table>
+
+<h2>3.4 Riscos Identificados</h2>
+
+<ul>
+  <li><b>Valida&ccedil;&atilde;o apenas no frontend:</b> As valida&ccedil;&otilde;es de e-mail, senha e n&uacute;mero CNJ existem no cliente, mas um atacante pode envi&aacute;-las diretamente para a API. Os testes confirmam que as regras do frontend est&atilde;o corretas, mas a seguran&ccedil;a real depende de valida&ccedil;&atilde;o duplicada no backend;</li>
+  <li><b>Arquivo renomeado com MIME vazio:</b> O sistema aceita arquivos com MIME type vazio como fallback para navegadores que n&atilde;o preenchem o Content-Type. Isso &eacute; intencional (documentado no c&oacute;digo), mas abre uma janela para envio de arquivos maliciosos. O teste <code>"aceita arquivo com MIME vazio"</code> documenta esse comportamento deliberado;</li>
+  <li><b>localStorage n&atilde;o criptografado:</b> Rascunhos de contesta&ccedil;&otilde;es jur&iacute;dicas s&atilde;o salvos em texto plano no localStorage. Embora a <code>persistSession</code> filtre tokens, o conte&uacute;do do rascunho pode conter dados sigilosos do cliente.</li>
+</ul>
+
+<h2>3.5 Poss&iacute;veis Melhorias</h2>
+
+<ol>
+  <li><b>Adicionar ambiente jsdom/happy-dom</b> ao Vitest para cobrir <code>readFileAsBase64</code> e simular intera&ccedil;&otilde;es com DOM, atingindo cobertura pr&oacute;xima de 100%;</li>
+  <li><b>Implementar testes de componentes React</b> com <code>@testing-library/react</code> para cobrir os formul&aacute;rios de <code>AuthModal</code> e <code>MainPanelSection</code>, que consomem diretamente as fun&ccedil;&otilde;es validadoras;</li>
+  <li><b>Adicionar testes de integra&ccedil;&atilde;o</b> com mock do Supabase para validar o fluxo completo de autentica&ccedil;&atilde;o e envio de contesta&ccedil;&otilde;es;</li>
+  <li><b>Configurar threshold de cobertura</b> no Vitest (ex: <code>branches: 90</code>) para impedir que futuras altera&ccedil;&otilde;es reduzam a cobertura abaixo do m&iacute;nimo aceit&aacute;vel;</li>
+  <li><b>Incluir testes de muta&ccedil;&atilde;o</b> (ex: Stryker) para verificar se os testes realmente detectam bugs introduzidos artificialmente, al&eacute;m de simplesmente exercitar as linhas.</li>
+</ol>
+
+<h2>3.6 Conclus&atilde;o</h2>
+
+<p>A implementa&ccedil;&atilde;o de 121 testes unit&aacute;rios atingiu uma cobertura de <b>94,69%</b> nos m&oacute;dulos de l&oacute;gica de neg&oacute;cio, com <b>100% de cobertura de fun&ccedil;&otilde;es</b> e cobertura completa nos tr&ecirc;s m&oacute;dulos mais cr&iacute;ticos (validators, cases, html). Os testes cobrem cen&aacute;rios principais, casos de erro e edge cases relevantes, incluindo prote&ccedil;&atilde;o contra XSS e valida&ccedil;&atilde;o de seguran&ccedil;a na persist&ecirc;ncia de sess&atilde;o.</p>
+
+<p>As lacunas identificadas s&atilde;o justific&aacute;veis por limita&ccedil;&otilde;es do ambiente de teste (aus&ecirc;ncia de DOM real) e n&atilde;o comprometem a confiabilidade da su&iacute;te. O projeto est&aacute; em uma base s&oacute;lida para evoluir com testes de componente e integra&ccedil;&atilde;o nas pr&oacute;ximas itera&ccedil;&otilde;es.</p>
+
+</body>
+</html>
