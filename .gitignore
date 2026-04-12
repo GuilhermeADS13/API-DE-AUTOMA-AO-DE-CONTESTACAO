@@ -17,3 +17,4 @@ Front comp/vite-project/dist/
 
 # Runtime logs
 *.log
+Front comp/vite-project/coverage/
