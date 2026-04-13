@@ -1,4 +1,4 @@
-# AutoJuri - Automacao de Contestacoes Juridicas
+# JurisFlow - Automacao de Contestacoes Juridicas
 
 Sistema web fullstack para automacao de contestacoes juridicas. O usuario preenche os dados do processo (numero CNJ, partes, fatos, pedido do autor) e o sistema gera automaticamente uma minuta de contestacao utilizando IA via workflow n8n, com suporte a Claude (Anthropic) e OpenAI como fallback.
 
