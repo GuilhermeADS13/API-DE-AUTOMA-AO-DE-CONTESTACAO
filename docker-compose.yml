@@ -1,56 +1,128 @@
 version: '3.8'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# AutoJuri — Backend + n8n
+#
+# Uso local:
+#   cp .env.example .env   # preencha as variaveis
+#   docker compose up -d
+#
+# Deploy Railway:
+#   Configure as variaveis de ambiente no painel do Railway e aponte para
+#   este repositorio. Railway detecta o docker-compose automaticamente.
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
+
+  # ── Backend FastAPI ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: autojuri_backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      # Banco PostgreSQL (Supabase pooler)
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT:-6543}
+      - DATABASE_NAME=${DATABASE_NAME:-postgres}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_SSLMODE=${DATABASE_SSLMODE:-require}
+
+      # Supabase Auth
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+
+      # CORS — origens permitidas separadas por virgula
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost:5173}
+
+      # n8n webhook (backend chama o n8n internamente via rede Docker)
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/contestacao
+
+      # Sessao
+      - SESSION_COOKIE_SAMESITE=${SESSION_COOKIE_SAMESITE:-lax}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}
+      - SESSION_TTL_HOURS=${SESSION_TTL_HOURS:-12}
+      - SESSION_CACHE_TTL_SECONDS=${SESSION_CACHE_TTL_SECONDS:-60}
+
+      # Rate limiter
+      - RATE_LIMIT_TRUST_FORWARDED=${RATE_LIMIT_TRUST_FORWARDED:-true}
+
+      # Observabilidade
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    depends_on:
+      n8n:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── n8n Workflow Automation ──────────────────────────────────────────────
   n8n:
     image: n8nio/n8n:latest
-    container_name: n8n
+    container_name: autojuri_n8n
     ports:
-      - "5678:5678"
+      - "${N8N_PORT:-5678}:5678"
     volumes:
-      - n8n_data:/home/node/.n8n          # dados do n8n (config, credenciais, banco sqlite)
-      - ./docs:/data/workflows:ro         # workflows JSON disponiveis para importar via API/UI
+      - n8n_data:/home/node/.n8n
+      - ./docs:/data/workflows:ro    # JSONs dos workflows disponiveis para importar
     environment:
-      # ── Auth basica n8n ────────────────────────────────────────────
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      # ── Task Runner (obrigatorio no n8n >= 1.x) ──────────────────────────
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 
-      # ── IA – Claude (Anthropic) ────────────────────────────────────
+      # ── IA – Claude (Anthropic) ──────────────────────────────────────────
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-6}
-      - ANTHROPIC_BASE_URL=https://api.anthropic.com
-      - ANTHROPIC_VERSION=2023-06-01
-      - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-4096}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
+      - ANTHROPIC_VERSION=${ANTHROPIC_VERSION:-2023-06-01}
+      - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-6000}
       - CLAUDE_TEMPERATURE=${CLAUDE_TEMPERATURE:-0.12}
-      - CLAUDE_TIMEOUT_MS=${CLAUDE_TIMEOUT_MS:-45000}
+      - CLAUDE_TIMEOUT_MS=${CLAUDE_TIMEOUT_MS:-120000}
 
-      # ── IA – OpenAI (fallback, opcional) ──────────────────────────
+      # ── IA – OpenAI (fallback, opcional) ────────────────────────────────
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
 
-      # ── Supabase ───────────────────────────────────────────────────
+      # ── Supabase ─────────────────────────────────────────────────────────
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
 
-      # ── Banco PostgreSQL (Supabase pooler) ────────────────────────
+      # ── Banco do n8n (usa Supabase Postgres para persistir workflows) ────
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=${DATABASE_HOST}
       - DB_POSTGRESDB_PORT=${DATABASE_PORT:-6543}
       - DB_POSTGRESDB_DATABASE=${DATABASE_NAME:-postgres}
       - DB_POSTGRESDB_USER=${DATABASE_USER}
       - DB_POSTGRESDB_PASSWORD=${DATABASE_PASSWORD}
-      - DB_POSTGRESDB_SSL=true
+      - DB_POSTGRESDB_SCHEMA=n8n
+      - DB_POSTGRESDB_SSL_ENABLED=true
       - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
 
-      # ── n8n host / webhook ─────────────────────────────────────────
-      - N8N_HOST=localhost
+      # ── n8n host / webhook ───────────────────────────────────────────────
+      - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
-      - WEBHOOK_URL=http://localhost:5678
-      - N8N_SECURE_COOKIE=false
+      # Em producao, substitua pelo dominio real (ex: https://n8n.seudominio.com)
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false}
       - GENERIC_TIMEZONE=America/Sao_Paulo
-      - N8N_LOG_LEVEL=info
+      - N8N_LOG_LEVEL=${N8N_LOG_LEVEL:-info}
 
-    restart: always
+      # ── Seguranca ────────────────────────────────────────────────────────
+      # Desative N8N_BASIC_AUTH em favor de autenticacao propria do n8n (>= 1.x)
+      - N8N_AUTH_EXCLUDE_ENDPOINTS=healthz
+
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
       interval: 30s

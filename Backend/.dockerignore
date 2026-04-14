@@ -1,0 +1,33 @@
+# Ambiente virtual Python — nao entra na imagem
+.venv/
+venv/
+env/
+
+# Variaveis de ambiente locais — injetadas pelo Docker/Railway em runtime
+.env
+.env.*
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Testes e cobertura
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# IDEs e sistema
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Logs
+*.log
