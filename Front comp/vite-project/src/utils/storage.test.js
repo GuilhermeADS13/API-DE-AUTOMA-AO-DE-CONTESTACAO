@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
 import {
   DRAFT_STORAGE_KEY,
   AUTH_SESSION_STORAGE_KEY,
@@ -158,5 +158,44 @@ describe("storage", () => {
       clearSession();
       expect(storageMock.removeItem).toHaveBeenCalledWith(AUTH_SESSION_STORAGE_KEY);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guardas SSR (typeof window === "undefined")
+// Testadas em bloco separado para controlar o objeto global com seguranca.
+// ---------------------------------------------------------------------------
+describe("storage - guardas SSR (sem window)", () => {
+  let windowBackup;
+
+  beforeEach(() => {
+    windowBackup = globalThis.window;
+    // Remove window para simular ambiente SSR / Node puro.
+    delete globalThis.window;
+  });
+
+  afterEach(() => {
+    globalThis.window = windowBackup;
+  });
+
+  it("readDraftFromStorage retorna default sem lancar erro", () => {
+    const result = readDraftFromStorage();
+    expect(result).toEqual({ form: null, info: "" });
+  });
+
+  it("persistDraft nao lanca erro sem window", () => {
+    expect(() => persistDraft({ form: {}, savedAt: "agora" })).not.toThrow();
+  });
+
+  it("readStoredSession retorna null sem window", () => {
+    expect(readStoredSession()).toBeNull();
+  });
+
+  it("persistSession nao lanca erro sem window", () => {
+    expect(() => persistSession({ id: "1", name: "A", email: "a@b.com" })).not.toThrow();
+  });
+
+  it("clearSession nao lanca erro sem window", () => {
+    expect(() => clearSession()).not.toThrow();
   });
 });

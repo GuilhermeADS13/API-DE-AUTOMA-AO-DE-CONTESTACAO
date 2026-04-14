@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_FILE_SIZE_BYTES,
   ALLOWED_EXTENSIONS,
@@ -141,6 +141,10 @@ describe("validateFile", () => {
 // readFileAsBase64
 // ---------------------------------------------------------------------------
 describe("readFileAsBase64", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("retorna string vazia para arquivo null", async () => {
     const result = await readFileAsBase64(null);
     expect(result).toBe("");
@@ -148,6 +152,79 @@ describe("readFileAsBase64", () => {
 
   it("retorna string vazia para undefined", async () => {
     const result = await readFileAsBase64(undefined);
+    expect(result).toBe("");
+  });
+
+  it("extrai base64 puro removendo prefixo data:...;base64,", async () => {
+    const fakeBase64 = "SGVsbG8gV29ybGQ=";
+
+    const MockFileReader = vi.fn(function () {
+      this.readAsDataURL = vi.fn(() => {
+        // Simula comportamento assincrono do browser
+        setTimeout(() => {
+          this.result = `data:application/pdf;base64,${fakeBase64}`;
+          this.onload();
+        }, 0);
+      });
+    });
+
+    vi.stubGlobal("FileReader", MockFileReader);
+
+    const fakeFile = new Blob(["conteudo"], { type: "application/pdf" });
+    const result = await readFileAsBase64(fakeFile);
+    expect(result).toBe(fakeBase64);
+  });
+
+  it("retorna string bruta quando resultado nao tem virgula", async () => {
+    const fakeRaw = "base64semvirgula";
+
+    const MockFileReader = vi.fn(function () {
+      this.readAsDataURL = vi.fn(() => {
+        setTimeout(() => {
+          this.result = fakeRaw;
+          this.onload();
+        }, 0);
+      });
+    });
+
+    vi.stubGlobal("FileReader", MockFileReader);
+
+    const fakeFile = new Blob(["x"], { type: "application/pdf" });
+    const result = await readFileAsBase64(fakeFile);
+    expect(result).toBe(fakeRaw);
+  });
+
+  it("rejeita a promise quando FileReader dispara onerror", async () => {
+    const MockFileReader = vi.fn(function () {
+      this.readAsDataURL = vi.fn(() => {
+        setTimeout(() => {
+          this.onerror();
+        }, 0);
+      });
+    });
+
+    vi.stubGlobal("FileReader", MockFileReader);
+
+    const fakeFile = new Blob(["x"], { type: "application/pdf" });
+    await expect(readFileAsBase64(fakeFile)).rejects.toThrow(
+      "Falha ao ler arquivo no navegador.",
+    );
+  });
+
+  it("retorna string vazia quando reader.result nao e string", async () => {
+    const MockFileReader = vi.fn(function () {
+      this.readAsDataURL = vi.fn(() => {
+        setTimeout(() => {
+          this.result = null; // nao e string
+          this.onload();
+        }, 0);
+      });
+    });
+
+    vi.stubGlobal("FileReader", MockFileReader);
+
+    const fakeFile = new Blob(["x"], { type: "application/pdf" });
+    const result = await readFileAsBase64(fakeFile);
     expect(result).toBe("");
   });
 });
