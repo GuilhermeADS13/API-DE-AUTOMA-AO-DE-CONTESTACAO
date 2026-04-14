@@ -128,6 +128,12 @@ export default function App() {
   const [authErrors, setAuthErrors] = useState({});
   const [authFeedback, setAuthFeedback] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
+  // `pendingConfirmEmail`: email aguardando confirmacao apos signUp bem-sucedido.
+  // Quando preenchido, o modal exibe a tela de "verifique seu e-mail".
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState(null);
+  // Controla throttle do botao de reenvio: timestamp da ultima tentativa.
+  const [resendCooldownUntil, setResendCooldownUntil] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const [form, setForm] = useState(() => ({
     processo: "",
@@ -321,10 +327,56 @@ export default function App() {
     setAuthErrors({});
     setAuthFeedback(null);
     setAuthLoading(false);
+    setPendingConfirmEmail(null);
+    setResendCooldownUntil(0);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!pendingConfirmEmail || resendLoading) return;
+    const now = Date.now();
+    if (now < resendCooldownUntil) return;
+
+    setResendLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingConfirmEmail,
+      });
+      if (error) {
+        setAuthFeedback({
+          variant: "danger",
+          text: "Nao foi possivel reenviar o e-mail. Tente novamente em instantes.",
+        });
+      } else {
+        setResendCooldownUntil(Date.now() + 60_000);
+        setAuthFeedback({
+          variant: "success",
+          text: "E-mail de confirmacao reenviado. Verifique sua caixa de entrada e spam.",
+        });
+      }
+    } catch {
+      setAuthFeedback({
+        variant: "danger",
+        text: "Erro ao tentar reenviar o e-mail de confirmacao.",
+      });
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleChangeConfirmEmail = () => {
+    setPendingConfirmEmail(null);
+    setResendCooldownUntil(0);
+    setAuthFeedback(null);
+    setAuthMode("signup");
+    setAuthForm((prev) => ({ ...prev, email: "" }));
   };
 
   const handleAuthModeChange = (mode) => {
     setAuthMode(mode);
+    setPendingConfirmEmail(null);
+    setResendCooldownUntil(0);
     setAuthTouched({});
     setAuthErrors({});
     setAuthFeedback(null);
@@ -443,18 +495,17 @@ export default function App() {
           return;
         }
 
-        setShowAuthModal(false);
-
         // Se confirmacao de e-mail estiver ativa no projeto, pode nao existir sessao imediata.
         if (!data?.session) {
           clearSession();
           setAuthUser(null);
-          setFeedback({
-            variant: "info",
-            text: "Conta criada. Confira seu e-mail para confirmar o cadastro e depois fazer login.",
-          });
+          // Mantem o modal aberto mostrando a tela de "verifique seu e-mail".
+          setPendingConfirmEmail(normalizedEmail);
+          setAuthFeedback(null);
           return;
         }
+
+        setShowAuthModal(false);
 
         const session = mapSupabaseUser(data.user, authForm.name.trim() || "Conta");
         if (!session) {
@@ -507,6 +558,8 @@ export default function App() {
 
       persistSession(session);
       setAuthUser(session);
+      setPendingConfirmEmail(null);
+      setResendCooldownUntil(0);
       setShowAuthModal(false);
       setFeedback({
         variant: "success",
@@ -1198,11 +1251,16 @@ export default function App() {
         feedback={authFeedback}
         loading={authLoading}
         passwordChecks={authPasswordChecks}
+        pendingConfirmEmail={pendingConfirmEmail}
+        resendCooldownUntil={resendCooldownUntil}
+        resendLoading={resendLoading}
         onHide={closeAuthModal}
         onModeChange={handleAuthModeChange}
         onFieldChange={handleAuthFieldChange}
         onFieldBlur={handleAuthFieldBlur}
         onSubmit={handleAuthSubmit}
+        onResendConfirmation={handleResendConfirmation}
+        onChangeConfirmEmail={handleChangeConfirmEmail}
       />
 
       <Modal
