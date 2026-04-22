@@ -420,8 +420,12 @@ def get_usuario_por_email(email: str) -> dict[str, str] | None:
 
 def create_sessao_usuario(usuario_id: str) -> str:
     """Cria sessao para o usuario e retorna token opaco."""
+    import random
     _ensure_db_initialized()
-    cleanup_sessoes_expiradas()
+    # Executa cleanup em ~2% dos logins para nao bloquear o fluxo de autenticacao.
+    # Sessoes expiradas acumulam lentamente; limpeza probabilistica e suficiente.
+    if random.random() < 0.02:
+        cleanup_sessoes_expiradas()
     token = uuid4().hex
 
     with _get_connection() as connection:

@@ -1,8 +1,11 @@
 """Utilitarios de autenticacao/sessao para rotas FastAPI."""
 
+import hashlib
 import json
 import logging
 import os
+import time
+import threading
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest, urlopen
@@ -30,6 +33,35 @@ try:
     SUPABASE_AUTH_TIMEOUT_SECONDS = int(os.getenv("SUPABASE_AUTH_TIMEOUT_SECONDS", "8"))
 except ValueError:
     SUPABASE_AUTH_TIMEOUT_SECONDS = 8
+
+# Cache para validacao de bearer tokens do Supabase.
+# Evita HTTP round-trip ao Supabase a cada request autenticada.
+# TTL curto (30s) garante que revogacoes sao refletidas rapidamente.
+_SUPABASE_CACHE_TTL = 30.0
+_supabase_token_cache: dict[str, tuple[float, dict[str, str] | None]] = {}
+_supabase_token_cache_lock = threading.Lock()
+
+
+def _supabase_cache_key(token: str) -> str:
+    """Usa SHA-256 do token como chave — nunca armazena o token em claro."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _get_cached_supabase_user(token: str) -> tuple[bool, dict[str, str] | None]:
+    """Retorna (hit, user). hit=True se encontrou no cache (mesmo que user=None)."""
+    key = _supabase_cache_key(token)
+    with _supabase_token_cache_lock:
+        entry = _supabase_token_cache.get(key)
+        if entry and entry[0] > time.monotonic():
+            return True, entry[1]
+    return False, None
+
+
+def _set_cached_supabase_user(token: str, user: dict[str, str] | None) -> None:
+    key = _supabase_cache_key(token)
+    expires = time.monotonic() + _SUPABASE_CACHE_TTL
+    with _supabase_token_cache_lock:
+        _supabase_token_cache[key] = (expires, user)
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -95,9 +127,17 @@ def _build_supabase_user(user_data: dict[str, Any]) -> dict[str, str] | None:
 
 
 def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
-    """Valida bearer token no Auth do Supabase e retorna perfil basico."""
+    """Valida bearer token no Auth do Supabase e retorna perfil basico.
+
+    Resultados sao cacheados por _SUPABASE_CACHE_TTL segundos para evitar
+    HTTP round-trip ao Supabase em cada request autenticada.
+    """
     if not SUPABASE_URL or not token:
         return None
+
+    hit, cached_user = _get_cached_supabase_user(token)
+    if hit:
+        return cached_user
 
     request_headers = {
         "Authorization": f"Bearer {token}",
@@ -116,9 +156,10 @@ def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
             body = response.read()
     except HTTPError as error:
         if error.code in {401, 403}:
-            # Token rejeitado pelo Supabase: log em info para auditoria sem
-            # poluir o canal de erro. NUNCA logamos o token em si.
+            # Token rejeitado pelo Supabase: cacheia None para evitar retry
+            # imediato. NUNCA logamos o token em si.
             logger.info("Supabase rejeitou bearer token (status=%s)", error.code)
+            _set_cached_supabase_user(token, None)
             return None
         logger.error(
             "Erro HTTP ao validar token no Supabase: status=%s msg=%s",
@@ -153,7 +194,9 @@ def validate_supabase_bearer_token(token: str) -> dict[str, str] | None:
         logger.warning("Resposta inesperada do Supabase Auth (tipo=%s)", type(payload).__name__)
         return None
 
-    return _build_supabase_user(payload)
+    user = _build_supabase_user(payload)
+    _set_cached_supabase_user(token, user)
+    return user
 
 
 async def get_authenticated_user(
