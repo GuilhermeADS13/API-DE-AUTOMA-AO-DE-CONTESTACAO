@@ -98,16 +98,11 @@ services:
       - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
 
-      # ── Banco do n8n (usa Supabase Postgres para persistir workflows) ────
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=${DATABASE_HOST}
-      - DB_POSTGRESDB_PORT=${DATABASE_PORT:-6543}
-      - DB_POSTGRESDB_DATABASE=${DATABASE_NAME:-postgres}
-      - DB_POSTGRESDB_USER=${DATABASE_USER}
-      - DB_POSTGRESDB_PASSWORD=${DATABASE_PASSWORD}
-      - DB_POSTGRESDB_SCHEMA=n8n
-      - DB_POSTGRESDB_SSL_ENABLED=true
-      - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+      # ── Banco do n8n — SQLite no volume Docker (sem conflito com Supabase) ──
+      # Para producao com multiplos workers, troque para postgresdb em schema
+      # separado e aponte para um banco dedicado (nao o mesmo do backend).
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
 
       # ── n8n host / webhook ───────────────────────────────────────────────
       - N8N_HOST=0.0.0.0
