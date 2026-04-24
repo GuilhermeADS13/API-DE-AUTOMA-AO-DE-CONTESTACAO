@@ -16,6 +16,8 @@ def _request_sem_headers() -> Request:
         "method": "POST",
         "path": "/api/usuarios/logout",
         "headers": [],
+        "query_string": b"",
+        "client": ("127.0.0.1", 0),
     }
     return Request(scope)
 
@@ -46,7 +48,7 @@ def test_cadastrar_usuario_sucesso(monkeypatch):
 
     monkeypatch.setattr(usuario, "apply_session_cookie", fake_apply_session_cookie)
 
-    result = asyncio.run(usuario.cadastrar_usuario(payload, response))
+    result = asyncio.run(usuario.cadastrar_usuario(_request_sem_headers(), payload, response))
 
     assert result["status"] == "sucesso"
     assert result["usuario"]["id"] == "USR-001"
@@ -66,7 +68,7 @@ def test_cadastrar_usuario_rejeita_email_duplicado(monkeypatch):
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(usuario.cadastrar_usuario(payload, response))
+        asyncio.run(usuario.cadastrar_usuario(_request_sem_headers(), payload, response))
 
     assert exc_info.value.status_code == 409
 
@@ -84,7 +86,7 @@ def test_cadastrar_usuario_trata_integridade(monkeypatch):
     monkeypatch.setattr(usuario, "create_usuario", fake_create_usuario)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(usuario.cadastrar_usuario(payload, response))
+        asyncio.run(usuario.cadastrar_usuario(_request_sem_headers(), payload, response))
 
     assert exc_info.value.status_code == 409
 
@@ -95,7 +97,7 @@ def test_login_rejeita_usuario_inexistente(monkeypatch):
     monkeypatch.setattr(usuario, "get_usuario_por_email", lambda email: None)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(usuario.login_usuario(payload, response))
+        asyncio.run(usuario.login_usuario(_request_sem_headers(), payload, response))
 
     assert exc_info.value.status_code == 401
 
@@ -111,7 +113,7 @@ def test_login_rejeita_senha_incorreta(monkeypatch):
     monkeypatch.setattr(usuario, "verify_password", lambda senha, hash_: False)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(usuario.login_usuario(payload, response))
+        asyncio.run(usuario.login_usuario(_request_sem_headers(), payload, response))
 
     assert exc_info.value.status_code == 401
 
@@ -135,7 +137,7 @@ def test_login_fluxo_feliz(monkeypatch):
 
     monkeypatch.setattr(usuario, "apply_session_cookie", fake_apply_session_cookie)
 
-    result = asyncio.run(usuario.login_usuario(payload, response))
+    result = asyncio.run(usuario.login_usuario(_request_sem_headers(), payload, response))
 
     assert result["status"] == "sucesso"
     assert result["token"] == "token-login"

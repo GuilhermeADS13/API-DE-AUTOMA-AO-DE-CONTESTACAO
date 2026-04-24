@@ -1,6 +1,7 @@
 # Schema Pydantic da entrada de processo/contestacao e validacoes de arquivo.
 import base64
 import binascii
+import os
 import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -9,6 +10,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 PROCESSO_REGEX = re.compile(r"^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$")
 ALLOWED_BASE_FILE_EXTENSIONS = (".pdf", ".doc", ".docx")
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+# Magic bytes dos formatos permitidos para deteccao de MIME real (sem lib externa).
+_MAGIC_BYTES: list[bytes] = [
+    b"%PDF",           # PDF
+    b"\xd0\xcf\x11\xe0",  # DOC (OLE2 Compound)
+    b"PK\x03\x04",    # DOCX (ZIP/OpenXML)
+]
 
 
 class Processo(BaseModel):
@@ -59,9 +67,10 @@ class Processo(BaseModel):
         if value is None:
             return None
 
-        arquivo = value.strip()
+        # Sanitiza path traversal antes de qualquer outra validacao.
+        arquivo = os.path.basename(value.strip())
         if not arquivo:
-            return None
+            raise ValueError("Nome de arquivo invalido.")
 
         if not arquivo.lower().endswith(ALLOWED_BASE_FILE_EXTENSIONS):
             raise ValueError("Arquivo base deve ser DOC, DOCX ou PDF.")
@@ -84,6 +93,12 @@ class Processo(BaseModel):
 
         if len(raw) > MAX_FILE_SIZE_BYTES:
             raise ValueError("Arquivo base excede o tamanho maximo de 10MB.")
+
+        # Verifica magic bytes para garantir que o conteudo corresponde ao tipo declarado.
+        if not any(raw.startswith(magic) for magic in _MAGIC_BYTES):
+            raise ValueError(
+                "Conteudo do arquivo nao corresponde a um PDF, DOC ou DOCX valido."
+            )
 
         return conteudo
 

@@ -4,10 +4,25 @@ import asyncio
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from App.models.processo import Processo
 from App.routes import contestacao
 from App.services.n8n_service import N8NServiceError
+
+
+def _fake_request(method: str = "POST", path: str = "/api/gerar-contestacao") -> Request:
+    """Request minimo para satisfazer o decorator @limiter.limit do slowapi."""
+    return Request(
+        scope={
+            "type": "http",
+            "method": method,
+            "path": path,
+            "headers": [],
+            "query_string": b"",
+            "client": ("127.0.0.1", 0),
+        }
+    )
 
 
 @pytest.fixture()
@@ -43,6 +58,7 @@ def test_gerar_contestacao_fluxo_feliz(monkeypatch, processo_valido):
 
     response = asyncio.run(
         contestacao.gerar_contestacao(
+            request=_fake_request(),
             processo=processo_valido,
             usuario={"id": "USR-ABC", "nome": "Ana", "email": "ana@teste.com"},
         )
@@ -78,6 +94,7 @@ def test_gerar_contestacao_trata_erro_n8n(monkeypatch, processo_valido):
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(
             contestacao.gerar_contestacao(
+                request=_fake_request(),
                 processo=processo_valido,
                 usuario={"id": "USR-ERR", "nome": "Ana", "email": "ana@teste.com"},
             )
@@ -112,6 +129,7 @@ def test_gerar_contestacao_retorna_422_em_erro_validacao(monkeypatch, processo_v
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(
             contestacao.gerar_contestacao(
+                request=_fake_request(),
                 processo=processo_valido,
                 usuario={"id": "USR-VAL", "nome": "Ana", "email": "ana@teste.com"},
             )
@@ -148,6 +166,7 @@ def test_obter_resumo_contestacoes_retorna_cards_e_historico(monkeypatch):
 
     response = asyncio.run(
         contestacao.obter_resumo_contestacoes(
+            request=_fake_request("GET", "/api/contestacoes/resumo"),
             limit=50,
             usuario={"id": "USR-DASH", "nome": "Ana", "email": "ana@teste.com"},
         )

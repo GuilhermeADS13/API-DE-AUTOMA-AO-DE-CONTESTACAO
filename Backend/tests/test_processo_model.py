@@ -23,7 +23,8 @@ def payload_base() -> dict:
 
 
 def _arquivo_base64_valido() -> str:
-    return base64.b64encode(b"conteudo de teste").decode("utf-8")
+    # Magic bytes PK\x03\x04 = DOCX (ZIP/OpenXML) — satisfaz a validacao de MIME.
+    return base64.b64encode(b"PK\x03\x04conteudo de teste DOCX").decode("utf-8")
 
 
 def test_processo_valido_sem_arquivo(payload_base):

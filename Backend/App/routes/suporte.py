@@ -3,8 +3,9 @@
 import asyncio
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
+from App.limiter import limiter
 from App.models.suporte import SuporteContato
 from App.services.suporte_email_service import (
     SupportEmailConfigError,
@@ -16,7 +17,8 @@ router = APIRouter()
 
 
 @router.post("/suporte/contato", status_code=status.HTTP_201_CREATED)
-async def enviar_contato(payload: SuporteContato) -> dict[str, str]:
+@limiter.limit("5/minute")
+async def enviar_contato(request: Request, payload: SuporteContato) -> dict[str, str]:
     """Recebe reclamacao de cliente e encaminha para o e-mail de suporte."""
     protocolo = f"SUP-{uuid4().hex[:10].upper()}"
     dados = payload.model_dump()

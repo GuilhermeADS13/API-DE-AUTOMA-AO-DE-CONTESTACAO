@@ -15,7 +15,7 @@ export default function AppFooter() {
               <span className="brand-mark">JF</span>
               <div>
                 <div className="brand-name">JurisFlow AI</div>
-                <div className="brand-sub">Plataforma de automacao de defesas juridicas</div>
+                <div className="brand-sub">Plataforma de automacao de Defesas Juridicas</div>
               </div>
             </div>
             <p className="text-secondary mb-0">

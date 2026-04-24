@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 logger = logging.getLogger(__name__)
 
 DEFAULT_N8N_WEBHOOK_URL = "http://localhost:5678/webhook/contestacao"
-N8N_TIMEOUT_SECONDS = 130
+N8N_TIMEOUT_SECONDS = int(os.getenv("N8N_TIMEOUT_SECONDS", "60"))
 
 
 class N8NServiceError(Exception):
@@ -63,14 +63,25 @@ def _enviar_para_n8n_sync(dados: dict[str, Any]) -> Any:
         return {"message": "Workflow acionado sem corpo de resposta."}
 
     try:
-        return json.loads(response_body.decode("utf-8"))
+        raw = json.loads(response_body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         logger.warning(
             "n8n retornou payload nao-JSON de %s: %s",
             webhook_url,
             type(error).__name__,
         )
-        return {"raw_response": response_body.decode("utf-8", errors="replace")}
+        return {"status": "processando", "raw_response": response_body.decode("utf-8", errors="replace")}
+
+    # Valida e filtra campos desconhecidos para prevenir injecao de dados arbitrarios.
+    if isinstance(raw, dict):
+        from App.models.n8n_response import N8NResponse
+        try:
+            return N8NResponse(**raw).model_dump(exclude_none=True)
+        except Exception:
+            logger.warning("Resposta n8n nao passou na validacao de schema — retornando status padrao")
+            return {"status": "processando"}
+
+    return raw
 
 
 async def enviar_para_n8n(dados: dict[str, Any]) -> Any:

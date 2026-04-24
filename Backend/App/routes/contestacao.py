@@ -1,13 +1,14 @@
 # Rotas HTTP de contestacoes: envio ao n8n e consulta de resumo do dashboard.
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from App.database import (
     get_dashboard_cards_por_usuario,
     list_contestacoes_por_usuario,
     save_contestacao,
 )
+from App.limiter import limiter
 from App.models.processo import Processo
 from App.security import get_authenticated_user
 from App.services.n8n_service import N8NServiceError, enviar_para_n8n
@@ -16,7 +17,9 @@ router = APIRouter()
 
 
 @router.post("/gerar-contestacao")
+@limiter.limit("2/minute")
 async def gerar_contestacao(
+    request: Request,
     processo: Processo,
     usuario: dict[str, str] = Depends(get_authenticated_user),
 ) -> dict:
@@ -64,7 +67,9 @@ async def gerar_contestacao(
 
 
 @router.get("/contestacoes/resumo")
+@limiter.limit("10/minute")
 async def obter_resumo_contestacoes(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=100),
     usuario: dict[str, str] = Depends(get_authenticated_user),
 ) -> dict:
