@@ -12,6 +12,7 @@ Migrations aplicadas via Supabase MCP (`apply_migration`) e versionadas aqui pra
 | `20260605120000` | add_metadados_juridicos_contestacoes | 🟢 feature / metadados |
 | `20260605130000` | add_ocr_cache_table | 🟢 feature / performance |
 | `20260605140000` | add_legislacao_table | 🟢 feature / RAG legislação |
+| `20260610100000` | add_jurisprudencia_externa | 🟢 feature / RAG jurisprudência |
 
 ## Reaplicar em outro ambiente
 

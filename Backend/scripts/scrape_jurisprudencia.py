@@ -1,0 +1,174 @@
+"""CLI pra coletar jurisprudencia de tribunais e popular public.jurisprudencia_externa.
+
+PR19 Fase 1: suporta STJ. Tribunais adicionais entram em PRs futuros (TJ-PE, TST).
+
+Uso:
+    cd Backend
+    PYTHONPATH=/app python scripts/scrape_jurisprudencia.py \\
+        --tribunal=stj \\
+        --query="rescisao indireta" \\
+        --area=trabalhista \\
+        --max=10
+
+Variantes:
+    # Sem area_juridica explicita (classifica por tipo_acao downstream)
+    --tribunal=stj --query="adicional insalubridade" --max=5
+
+    # Dry run: nao grava no banco, so mostra o que seria salvo
+    --tribunal=stj --query="ferias proporcionais" --max=3 --dry-run
+
+Pre-requisitos:
+- Container backend rodando OU venv com DATABASE_URL setado
+- EMBEDDING_PROVIDER=local (sentence-transformers, instalado por padrao)
+- Acesso a internet pro portal do STJ
+
+LIMITACAO CONHECIDA — WAF do STJ:
+  O portal SCON do STJ bloqueia (403) requests vindos de IPs de datacenter
+  (Hetzner/AWS/GCP — onde o container Docker normalmente roda). Se o smoke
+  test falhar com 403, opcoes:
+  1. Rodar este script localmente no notebook (IP residencial passa)
+  2. Migrar pra Playwright headless em PR futuro (passa pelo desafio JS)
+  Detalhes na docstring do `Backend/App/services/scrapers/stj.py`.
+
+Saida: log estruturado com {capturados, embeddings_gerados, duplicados, falhas}.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+import time
+from pathlib import Path
+
+# Permite rodar de qualquer diretorio dentro de Backend/
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from App.database import upsert_jurisprudencia  # noqa: E402
+from App.services.embedding_service import gerar_embedding  # noqa: E402
+from App.services.scrapers import STJScraper  # noqa: E402
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger("scrape_jurisprudencia")
+
+SCRAPERS = {
+    "stj": STJScraper,
+    # 'tjpe': TJPEScraper,  # PR20
+    # 'tst': TSTScraper,    # PR21
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Coleta jurisprudencia de tribunais e indexa no RAG.",
+    )
+    parser.add_argument(
+        "--tribunal", required=True, choices=sorted(SCRAPERS.keys()),
+        help="Tribunal alvo. Hoje so STJ; TJ-PE e TST em PRs futuros.",
+    )
+    parser.add_argument(
+        "--query", required=True,
+        help="Termo de busca (ex: 'rescisao indireta', 'adicional insalubridade').",
+    )
+    parser.add_argument(
+        "--area", default=None,
+        help="Area juridica canonica (trabalhista|consumidor|...). Opcional.",
+    )
+    parser.add_argument(
+        "--max", type=int, default=10,
+        help="Max acordaos por execucao. Cap rigido em 50 (alem disso o portal "
+        "bloqueia com captcha).",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Nao grava no banco, so mostra o que seria salvo.",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+
+    scraper_cls = SCRAPERS[args.tribunal]
+    scraper = scraper_cls()
+
+    inicio = time.time()
+    logger.info(
+        "Iniciando coleta tribunal=%s query=%r max=%d dry=%s",
+        args.tribunal, args.query, args.max, args.dry_run,
+    )
+
+    try:
+        acordaos = scraper.buscar(args.query, max_resultados=args.max)
+    except Exception as err:
+        logger.error("Scraper falhou: %s", err)
+        return 1
+
+    if not acordaos:
+        logger.warning("Nenhum acordao retornado. Tente outra query ou aguarde.")
+        return 0
+
+    logger.info("Coletados %d acordaos. Gerando embeddings...", len(acordaos))
+
+    capturados = 0
+    embeddings_gerados = 0
+    falhas = 0
+
+    for i, ac in enumerate(acordaos, start=1):
+        try:
+            # Texto pra embedding combina ementa + tese_firmada (quando houver)
+            texto_embed = ac["ementa"]
+            if ac.get("tese_firmada"):
+                texto_embed = f"{ac['tese_firmada']}\n\n{texto_embed}"
+
+            embedding = gerar_embedding(texto_embed[:5000])  # cap defensivo
+            if embedding:
+                embeddings_gerados += 1
+            else:
+                logger.warning(
+                    "[%d/%d] %s sem embedding (provider local indisponivel?)",
+                    i, len(acordaos), ac["numero_processo"],
+                )
+
+            if args.dry_run:
+                logger.info(
+                    "[DRY] %s | %s | data=%s | ementa=%d chars",
+                    ac["numero_processo"], ac["tipo_decisao"],
+                    ac.get("data_julgamento", "?"), len(ac["ementa"]),
+                )
+            else:
+                upsert_jurisprudencia(
+                    tribunal=ac["tribunal"],
+                    numero_processo=ac["numero_processo"],
+                    ementa=ac["ementa"],
+                    tipo_decisao=ac.get("tipo_decisao", "Acordao"),
+                    relator=ac.get("relator"),
+                    data_julgamento=ac.get("data_julgamento"),
+                    tese_firmada=ac.get("tese_firmada"),
+                    area_juridica=args.area,
+                    peso_relevancia=ac.get("peso_relevancia_sugerido", 5),
+                    fonte_url=ac.get("fonte_url"),
+                    embedding=embedding,
+                )
+            capturados += 1
+        except Exception as err:  # noqa: BLE001 — falha de um nao trava lote
+            falhas += 1
+            logger.error(
+                "[%d/%d] Falha no upsert de %s: %s",
+                i, len(acordaos), ac.get("numero_processo", "?"), err,
+            )
+
+    duracao = time.time() - inicio
+    logger.info(
+        "Concluido em %.1fs | capturados=%d embeddings=%d falhas=%d dry=%s",
+        duracao, capturados, embeddings_gerados, falhas, args.dry_run,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

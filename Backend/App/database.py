@@ -1633,6 +1633,175 @@ def buscar_legislacao_lexical(
     return [_row_to_legislacao(row) for row in rows]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PR19 — Jurisprudencia externa (acordaos de tribunais — busca hibrida)
+# Complementa public.legislacao (leis+sumulas) com decisoes individuais.
+# Schema espelha legislacao mas com numero_processo + relator + data + peso.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# Filtro temporal default: jurisprudencia muito antiga pode estar superada
+# por nova sumula. Cap como ISO 8601 pra compatibilidade JSON.
+JURISPRUDENCIA_DATA_MINIMA_DEFAULT = "2018-01-01"
+
+
+def upsert_jurisprudencia(
+    tribunal: str,
+    numero_processo: str,
+    ementa: str,
+    *,
+    tipo_decisao: str = "Acordao",
+    relator: str | None = None,
+    data_julgamento: str | None = None,  # ISO 'YYYY-MM-DD'
+    tese_firmada: str | None = None,
+    area_juridica: str | None = None,
+    peso_relevancia: int = 5,
+    fonte_url: str | None = None,
+    embedding: list[float] | None = None,
+) -> None:
+    """UPSERT em public.jurisprudencia_externa por (tribunal, numero_processo).
+
+    Usado pelo scraper. Idempotente — re-scraping atualiza ementa/embedding
+    mas preserva criado_em. scraped_at sempre vira NOW() no UPSERT.
+    """
+    if not tribunal or not numero_processo or not ementa:
+        return
+    _ensure_db_initialized()
+    vec_str = _format_pgvector(embedding) if embedding else None
+    area = area_juridica if area_juridica in AREAS_JURIDICAS_CANONICAS else None
+    peso = max(1, min(int(peso_relevancia), 10))
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO jurisprudencia_externa
+                  (tribunal, tipo_decisao, numero_processo, relator,
+                   data_julgamento, ementa, tese_firmada, area_juridica,
+                   peso_relevancia, fonte_url, embedding, scraped_at)
+                VALUES (%s, %s, %s, %s, %s::date, %s, %s, %s, %s, %s, %s::vector, now())
+                ON CONFLICT (tribunal, numero_processo) DO UPDATE
+                  SET tipo_decisao = EXCLUDED.tipo_decisao,
+                      relator = EXCLUDED.relator,
+                      data_julgamento = EXCLUDED.data_julgamento,
+                      ementa = EXCLUDED.ementa,
+                      tese_firmada = EXCLUDED.tese_firmada,
+                      area_juridica = EXCLUDED.area_juridica,
+                      peso_relevancia = EXCLUDED.peso_relevancia,
+                      fonte_url = EXCLUDED.fonte_url,
+                      embedding = EXCLUDED.embedding,
+                      scraped_at = now()
+                """,
+                (
+                    tribunal, tipo_decisao, numero_processo, relator,
+                    data_julgamento, ementa, tese_firmada, area,
+                    peso, fonte_url, vec_str,
+                ),
+            )
+        connection.commit()
+
+
+def _row_to_jurisprudencia(row: tuple) -> dict[str, Any]:
+    """Mapper de tupla do SELECT em buscar_jurisprudencia_*."""
+    return {
+        "tribunal": str(row[0] or ""),
+        "tipo_decisao": str(row[1] or ""),
+        "numero_processo": str(row[2] or ""),
+        "relator": str(row[3] or "") if row[3] else None,
+        "data_julgamento": _iso_or_str(row[4]),
+        "ementa": str(row[5] or ""),
+        "tese_firmada": str(row[6] or "") if row[6] else None,
+        "area_juridica": str(row[7] or "") if row[7] else None,
+        "peso_relevancia": int(row[8] or 5),
+        "fonte_url": str(row[9] or "") if row[9] else None,
+        "score": float(row[10] or 0.0),
+    }
+
+
+def buscar_jurisprudencia_semantica(
+    embedding: list[float],
+    *,
+    area_juridica: str | None = None,
+    limit: int = 5,
+    data_minima: str = JURISPRUDENCIA_DATA_MINIMA_DEFAULT,
+) -> list[dict[str, Any]]:
+    """Busca jurisprudencia por similaridade vetorial (cosine).
+
+    Sem multi-tenant (jurisprudencia eh fonte global). Filtro temporal
+    obrigatorio pra evitar decisoes superadas. Score combina cosine +
+    peso_relevancia normalizado (10 = Sumula Vinculante > 5 = Acordao comum).
+    """
+    _ensure_db_initialized()
+    vec_str = _format_pgvector(embedding)
+    safe_limit = max(1, min(int(limit), 10))
+    area_canonica = area_juridica if area_juridica in AREAS_JURIDICAS_CANONICAS else None
+
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    tribunal, tipo_decisao, numero_processo, relator,
+                    data_julgamento, ementa, tese_firmada, area_juridica,
+                    peso_relevancia, fonte_url,
+                    (1 - (embedding <=> %s::vector)) * (0.7 + 0.03 * peso_relevancia) AS score
+                FROM jurisprudencia_externa
+                WHERE embedding IS NOT NULL
+                  AND data_julgamento >= %s::date
+                  AND (%s::text IS NULL OR area_juridica IS NULL OR area_juridica = %s)
+                ORDER BY score DESC
+                LIMIT %s
+                """,
+                (vec_str, data_minima, area_canonica, area_canonica, safe_limit),
+            )
+            rows = cursor.fetchall()
+    return [_row_to_jurisprudencia(row) for row in rows]
+
+
+def buscar_jurisprudencia_lexical(
+    texto_query: str,
+    *,
+    area_juridica: str | None = None,
+    limit: int = 5,
+    data_minima: str = JURISPRUDENCIA_DATA_MINIMA_DEFAULT,
+) -> list[dict[str, Any]]:
+    """Busca jurisprudencia por ts_rank_cd + filtro temporal + peso."""
+    query_normalizada = _normalizar_query_lexical(texto_query)
+    if not query_normalizada:
+        return []
+    safe_limit = max(1, min(int(limit), 10))
+    area_canonica = area_juridica if area_juridica in AREAS_JURIDICAS_CANONICAS else None
+
+    _ensure_db_initialized()
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    tribunal, tipo_decisao, numero_processo, relator,
+                    data_julgamento, ementa, tese_firmada, area_juridica,
+                    peso_relevancia, fonte_url,
+                    ts_rank_cd(texto_tsv, plainto_tsquery('portuguese', %s))
+                      * (0.7 + 0.03 * peso_relevancia) AS score
+                FROM jurisprudencia_externa
+                WHERE texto_tsv @@ plainto_tsquery('portuguese', %s)
+                  AND data_julgamento >= %s::date
+                  AND (%s::text IS NULL OR area_juridica IS NULL OR area_juridica = %s)
+                ORDER BY score DESC
+                LIMIT %s
+                """,
+                (
+                    query_normalizada,
+                    query_normalizada,
+                    data_minima,
+                    area_canonica,
+                    area_canonica,
+                    safe_limit,
+                ),
+            )
+            rows = cursor.fetchall()
+    return [_row_to_jurisprudencia(row) for row in rows]
+
+
 def salvar_exemplar(
     tipo_acao: str,
     tese_central: str,

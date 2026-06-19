@@ -54,6 +54,7 @@ from App.routes import (  # noqa: E402
     contestacao_peticao,
     edicao,
     feedback,
+    jurisprudencia,
     legislacao,
     rag,
     suporte,
@@ -126,6 +127,7 @@ app.include_router(suporte.router, prefix="/api", tags=["Suporte"])
 app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 app.include_router(rag.router, prefix="/api", tags=["RAG Semantico"])
 app.include_router(legislacao.router, prefix="/api", tags=["Legislacao"])
+app.include_router(jurisprudencia.router, prefix="/api", tags=["Jurisprudencia"])
 
 
 @app.get("/")
