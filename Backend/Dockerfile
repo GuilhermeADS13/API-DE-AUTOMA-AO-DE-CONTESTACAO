@@ -29,6 +29,9 @@ WORKDIR /app
 # - poppler-utils: pdf2image precisa do `pdftoppm`/`pdftocairo` para converter PDF -> imagem
 # - libreoffice-writer + libreoffice-core: conversao DOCX -> PDF no endpoint /baixar?formato=pdf
 #   (usado por App/services/pdf_converter.py via subprocess headless)
+# - PR20: libs do Chromium pra Playwright (scraper STJ resolve JS challenge do WAF)
+#   Lista oficial do Playwright pra debian/ubuntu slim:
+#   https://playwright.dev/python/docs/browsers#install-system-dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     tesseract-ocr \
@@ -36,11 +39,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     libreoffice-writer \
     libreoffice-core \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia pacotes instalados do builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# PR20: Baixa o Chromium do Playwright (~170MB) no path padrao /root/.cache.
+# Move pra /home/appuser depois do adduser; nao usar --with-deps pq libs do
+# sistema ja foram instaladas explicitamente acima (mais control + cache).
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN python -m playwright install chromium && chmod -R 755 /opt/ms-playwright
 
 # Copia codigo da aplicacao (sem .venv, __pycache__, .env local)
 COPY . .

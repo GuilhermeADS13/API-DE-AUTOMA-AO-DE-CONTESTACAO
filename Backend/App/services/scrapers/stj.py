@@ -12,23 +12,34 @@ Estrategia:
 - Parser via seletores CSS estaveis do template do STJ
 - Falha de parse de UM item nao derruba o lote (log warning + skip)
 
-WAF do STJ — em IP de datacenter mesmo curl_cffi nao basta:
-  O portal SCON tem WAF (provavelmente Cloudflare com JS challenge ou
-  Imperva) que retorna 403 mesmo com TLS fingerprint Chrome via
-  curl_cffi (impersonate=chrome120). Em IP residencial, o impersonate
-  geralmente passa; em datacenter (AWS/Hetzner/GCP), o WAF parece checar
-  reputacao do IP alem do fingerprint.
+WAF do STJ — Cloudflare Turnstile bloqueia ate Playwright headless em datacenter:
+  O portal SCON usa Cloudflare Turnstile (interstitial 'Um momento...') que
+  faz fingerprint de Chromium headless mesmo com stealth init_script
+  (navigator.webdriver mascarado, plugins fake, etc) e args anti-detection.
+  No nosso ambiente, smoke real (2026-06-29) confirmou:
+   - curl_cffi (impersonate=chrome120): 403 imediato — WAF nem deixa passar.
+   - Playwright headless + stealth + wait Turnstile 25s: titulo segue
+     'Um momento...' e div.documento nao aparece. Challenge nao resolve.
 
-  Mitigacao definitiva (PR20):
-  - Playwright headless: carrega Chromium real, resolve JS challenge.
-    +150MB instalado, +30-60s por scraping (vs <1s do curl).
-  - Alternativa: rodar este script localmente no notebook do dev
-    (IP residencial passa o curl_cffi sem problema).
+  Causa: Cloudflare combina reputacao do IP de datacenter + sinais de
+  automacao (resolucao de canvas, audio fingerprint, mouse jitter, WebGL).
+  Stealth basico nao engana.
 
-  Por que mantemos curl_cffi:
-  - Outros tribunais (TJ-PE, TST) podem nao ter WAF tao agressivo
-  - IPs residenciais (notebook do dev) funcionam
-  - Fallback gracioso pro requests puro nao quebra testes
+  Mitigacoes possiveis (PRs futuros, nao incluidas no PR20):
+  - Rodar o script localmente no notebook do dev: IP residencial geralmente
+    passa o Turnstile sem challenge. ESTA E A ALTERNATIVA SUPORTADA HOJE:
+      cd Backend
+      .venv\\Scripts\\python.exe scripts/scrape_jurisprudencia.py \\
+          --tribunal=stj --query="rescisao indireta" --max=10
+  - CAPTCHA solver pago (2Captcha, Anti-Captcha): ~US$ 2/1000 challenges.
+  - Proxy residencial (BrightData, Smartproxy): ~US$ 5/GB.
+  - Xvfb + headless=False + playwright-stealth-plus: parcialmente eficaz.
+
+  Por que mantemos a cadeia curl_cffi -> Playwright mesmo assim:
+  - Outros tribunais (TJ-PE, TST) podem nao ter Cloudflare. Aproveita o
+    mesmo codigo de cascata sem precisar reescrever scraper por tribunal.
+  - Em IP residencial, ambos passam.
+  - Fallback gracioso: scraper retorna lista vazia em vez de explodir.
 
 Outras limitacoes:
 - Resultados acima de 100 paginadas viram captcha. Cap rigido em max=50
@@ -44,15 +55,26 @@ import time
 from datetime import datetime
 from typing import Any
 
-# curl_cffi mimica TLS fingerprint (JA3) do Chrome real — necessario porque
-# o WAF do STJ identifica clientes Python pelo TLS handshake e retorna 403.
-# Fallback pra requests so se curl_cffi nao estiver instalado (dev/testes).
+# curl_cffi mimica TLS fingerprint (JA3) do Chrome real — fast-path quando
+# WAF do STJ filtra so por TLS handshake. Em IP de datacenter, geralmente
+# nao basta (WAF tem JS challenge tambem). Veja fallback Playwright abaixo.
 try:
     from curl_cffi import requests as cffi_requests
     _HAS_CURL_CFFI = True
 except ImportError:
     cffi_requests = None
     _HAS_CURL_CFFI = False
+
+# Playwright carrega Chromium real, resolve JS challenge do WAF (Cloudflare
+# Turnstile, Imperva, etc). +5-10s por request mas garantia de passar em
+# qualquer IP. Usado como fallback quando curl_cffi retorna 403.
+try:
+    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    _HAS_PLAYWRIGHT = True
+except ImportError:
+    sync_playwright = None
+    PlaywrightTimeout = Exception
+    _HAS_PLAYWRIGHT = False
 
 import requests
 from bs4 import BeautifulSoup
@@ -156,17 +178,12 @@ class STJScraper:
         except Exception as err:  # noqa: BLE001 — fallback amplo (curl_cffi vs requests)
             logger.warning("Falha ao obter cookies de sessao STJ: %s", err)
 
-    def _fetch_pagina(self, query: str) -> str:
-        """GET ao portal com query params do form de pesquisa.
-
-        Faz visita previa ao SCON/ pra cookies de sessao (mitiga 403 WAF).
-        Adiciona Referer apontando pra home (signals tipico de navegacao real).
-        """
-        self._garantir_cookies_sessao()
-        self._rate_limit_aguardar()
+    def _build_search_url(self, query: str) -> str:
+        """Constroi URL completa da pesquisa STJ (usado por curl_cffi e Playwright)."""
+        from urllib.parse import urlencode
         params = {
             "operador": "e",
-            "b": "ACOR",          # busca em ACOR (acordaos consolidados)
+            "b": "ACOR",
             "thesaurus": "JURIDICO",
             "p": "true",
             "tp": "T",
@@ -175,14 +192,160 @@ class STJScraper:
             "orgaoJulg": "",
             "pesquisaInicialAvancada": query,
         }
-        resp = self.session.get(
-            self.BASE_URL,
-            params=params,
-            timeout=self.TIMEOUT_SEC,
-            headers={"Referer": self.HOME_URL},
-        )
-        resp.raise_for_status()
-        return resp.text
+        return f"{self.BASE_URL}?{urlencode(params)}"
+
+    # Init script anti-deteccao: roda em todo frame ANTES de qualquer script da pagina.
+    # Mascara as flags reveladoras de headless (navigator.webdriver=true, plugins
+    # vazio, etc) que Cloudflare Turnstile e Imperva checam.
+    _STEALTH_JS = """
+    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+    Object.defineProperty(navigator, 'languages', {get: () => ['pt-BR', 'pt', 'en']});
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [
+        {name: 'Chrome PDF Plugin'},
+        {name: 'Chrome PDF Viewer'},
+        {name: 'Native Client'}
+      ]
+    });
+    window.chrome = {runtime: {}};
+    const originalQuery = window.navigator.permissions && window.navigator.permissions.query;
+    if (originalQuery) {
+      window.navigator.permissions.query = (p) =>
+        p.name === 'notifications'
+          ? Promise.resolve({state: Notification.permission})
+          : originalQuery(p);
+    }
+    """
+
+    def _fetch_via_playwright(self, query: str) -> str:
+        """Carrega a pesquisa via Chromium real (Playwright). Resolve JS challenge
+        do WAF (Cloudflare Turnstile, Imperva) — funciona ate em IP de datacenter.
+
+        Usa init_script anti-deteccao (mascara navigator.webdriver, plugins, etc)
+        e aguarda ate o Turnstile resolver (titulo deixar de ser 'Um momento...').
+
+        Custo: ~10-25s por request (vs <1s do curl_cffi). Usado so quando o
+        fast-path falhar com 403/captcha.
+        """
+        if not _HAS_PLAYWRIGHT or sync_playwright is None:
+            raise RuntimeError(
+                "Playwright nao instalado. Adicione 'playwright' ao requirements "
+                "e rode 'python -m playwright install chromium'."
+            )
+        url = self._build_search_url(query)
+        logger.info("STJ scraper: fallback Playwright headless em %s", url[:80])
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-dev-shm-usage",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-site-isolation-trials",
+                    "--disable-web-security",
+                ],
+            )
+            try:
+                context = browser.new_context(
+                    user_agent=self.USER_AGENT,
+                    locale="pt-BR",
+                    timezone_id="America/Sao_Paulo",
+                    viewport={"width": 1280, "height": 720},
+                    extra_http_headers={
+                        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+                    },
+                )
+                # Injeta stealth ANTES de qualquer navegacao
+                context.add_init_script(self._STEALTH_JS)
+
+                page = context.new_page()
+                try:
+                    # 1. Visita home — Turnstile aparece aqui se for primeira visita.
+                    #    domcontentloaded é melhor que networkidle (turnstile mantem socket).
+                    page.goto(self.HOME_URL, wait_until="domcontentloaded", timeout=30000)
+                    self._aguardar_turnstile(page)
+
+                    # 2. Vai pra pesquisa (deveria ja ter cookies do challenge)
+                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    self._aguardar_turnstile(page)
+
+                    # 3. Aguarda os div.documento (parser depende). Timeout largo:
+                    #    primeira pesquisa pode demorar se o portal estiver lento.
+                    try:
+                        page.wait_for_selector("div.documento", timeout=20000)
+                    except PlaywrightTimeout:
+                        logger.warning(
+                            "STJ scraper: div.documento nao apareceu em 20s "
+                            "(query sem hits, ainda em turnstile, ou layout mudou?). "
+                            "Titulo atual: %r", page.title()[:80]
+                        )
+                    return page.content()
+                finally:
+                    page.close()
+                    context.close()
+            finally:
+                browser.close()
+
+    @staticmethod
+    def _aguardar_turnstile(page: Any) -> None:
+        """Aguarda o Cloudflare Turnstile resolver. Titulo da pagina muda de
+        'Um momento...' / 'Just a moment...' pro titulo real do STJ.
+
+        Timeout 25s — challenge geralmente resolve em 3-10s em IP residencial,
+        ate 20s em datacenter. Se exceder, segue mesmo assim (pode estar OK).
+        """
+        try:
+            page.wait_for_function(
+                "() => !document.title.toLowerCase().includes('um momento') "
+                "&& !document.title.toLowerCase().includes('just a moment')",
+                timeout=25000,
+            )
+        except PlaywrightTimeout:
+            logger.warning(
+                "STJ scraper: Turnstile nao resolveu em 25s (titulo: %r)",
+                page.title()[:80],
+            )
+
+    def _fetch_pagina(self, query: str) -> str:
+        """Fetch da pagina de resultados. Tenta curl_cffi primeiro (rapido);
+        se 403/captcha, cai pra Playwright headless (Chromium real, ~5-10s).
+        """
+        self._garantir_cookies_sessao()
+        self._rate_limit_aguardar()
+        params = {
+            "operador": "e",
+            "b": "ACOR",
+            "thesaurus": "JURIDICO",
+            "p": "true",
+            "tp": "T",
+            "processo": "",
+            "ministro": "",
+            "orgaoJulg": "",
+            "pesquisaInicialAvancada": query,
+        }
+
+        # Tenta curl_cffi (fast-path)
+        try:
+            resp = self.session.get(
+                self.BASE_URL,
+                params=params,
+                timeout=self.TIMEOUT_SEC,
+                headers={"Referer": self.HOME_URL},
+            )
+            resp.raise_for_status()
+            html = resp.text
+            # Mesmo com 200, o portal pode ter retornado pagina de captcha
+            if not self._detectou_captcha(html):
+                return html
+            logger.warning("STJ scraper: curl_cffi recebeu captcha — fallback Playwright")
+        except Exception as err:
+            logger.warning(
+                "STJ scraper: curl_cffi falhou (%s) — fallback Playwright", err
+            )
+
+        # Fallback Playwright (carrega Chromium real, resolve JS challenge)
+        return self._fetch_via_playwright(query)
 
     @staticmethod
     def _detectou_captcha(html: str) -> bool:

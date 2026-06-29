@@ -22,12 +22,26 @@ Pre-requisitos:
 - EMBEDDING_PROVIDER=local (sentence-transformers, instalado por padrao)
 - Acesso a internet pro portal do STJ
 
-LIMITACAO CONHECIDA — WAF do STJ:
-  O portal SCON do STJ bloqueia (403) requests vindos de IPs de datacenter
-  (Hetzner/AWS/GCP — onde o container Docker normalmente roda). Se o smoke
-  test falhar com 403, opcoes:
-  1. Rodar este script localmente no notebook (IP residencial passa)
-  2. Migrar pra Playwright headless em PR futuro (passa pelo desafio JS)
+LIMITACAO CONHECIDA — Cloudflare Turnstile do STJ em IP de datacenter:
+  Smoke real (2026-06-29) confirmou que NEM curl_cffi NEM Playwright
+  headless com stealth conseguem passar do Turnstile quando o request vem
+  de IP de datacenter (Docker rodando em servidor, AWS, Hetzner, GCP).
+  Cloudflare combina reputacao do IP + sinais de automacao mais avancados.
+
+  Como usar este script HOJE:
+   * Rode no notebook do dev (IP residencial) com .venv local:
+       cd Backend
+       .venv\\Scripts\\python.exe scripts/scrape_jurisprudencia.py \\
+           --tribunal=stj --query="rescisao indireta" --max=10
+   * O scraper tentara curl_cffi primeiro (~1s); se cair (raro em residencial)
+     cai pra Playwright (~10-25s). Pro Playwright local, instale Chromium:
+       .venv\\Scripts\\python.exe -m playwright install chromium
+
+  Alternativas pra produzir em servidor (PRs futuros):
+   - CAPTCHA solver (2Captcha API): ~US$ 2 / 1000 challenges
+   - Proxy residencial (BrightData): ~US$ 5/GB
+   - Migrar tribunais que nao tem Cloudflare primeiro (TJ-PE, TST)
+
   Detalhes na docstring do `Backend/App/services/scrapers/stj.py`.
 
 Saida: log estruturado com {capturados, embeddings_gerados, duplicados, falhas}.

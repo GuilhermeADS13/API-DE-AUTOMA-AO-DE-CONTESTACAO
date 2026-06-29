@@ -22,13 +22,15 @@ sentence-transformers>=3,<4
 # cohere>=5,<6    (embed-multilingual-v3.0)
 # openai>=1       (text-embedding-3-small com dimensions=1024)
 
-# PR19 - Scraping de jurisprudencia de tribunais (STJ, TJ-PE, TST).
+# PR19/PR20 - Scraping de jurisprudencia de tribunais (STJ, TJ-PE, TST).
 # beautifulsoup4 parseia HTML do scon.stj.jus.br e similares; lxml ja existe.
-# curl_cffi mimica TLS fingerprint do Chrome — necessario porque STJ tem
-# WAF que bloqueia clientes Python com fingerprint default (retorna 403).
+# curl_cffi mimica TLS fingerprint do Chrome (fast-path, ~1s/request).
+# playwright carrega Chromium real (resolve JS challenge do WAF, ~5s/request).
+# Scraper tenta curl_cffi primeiro; se falhar com 403, cai pra playwright.
 beautifulsoup4==4.12.3
 requests==2.32.3
 curl_cffi==0.7.4
+playwright==1.49.1
 
 # Transitivas pinadas para reproducibilidade do build
 annotated-types==0.7.0
