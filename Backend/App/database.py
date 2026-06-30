@@ -1642,7 +1642,15 @@ def buscar_legislacao_lexical(
 
 # Filtro temporal default: jurisprudencia muito antiga pode estar superada
 # por nova sumula. Cap como ISO 8601 pra compatibilidade JSON.
-JURISPRUDENCIA_DATA_MINIMA_DEFAULT = "2018-01-01"
+#
+# PR22: rebaixado de 2018-01-01 para 2000-01-01 porque as Sumulas TST
+# paradigma do seed (Sum. 32, 73, 14, 47, 90, 191, 244, 308, 268, 129,
+# OJ 261, etc) sao de 2003-2017 e continuam vigentes. Filtro 2018+
+# excluia ~25 dos 30 paradigmas curados — RAG retornava so STF recente.
+# Pra excluir realmente decisao obsoleta, basta o curador ajustar
+# `data_julgamento` no upsert OU passar `data_minima` explicito no payload
+# do POST /api/jurisprudencia/buscar.
+JURISPRUDENCIA_DATA_MINIMA_DEFAULT = "2000-01-01"
 
 
 def upsert_jurisprudencia(

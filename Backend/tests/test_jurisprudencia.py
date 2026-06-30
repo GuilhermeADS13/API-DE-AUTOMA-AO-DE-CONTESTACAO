@@ -170,12 +170,18 @@ class TestRotaBuscarJurisprudencia:
         assert resp["status"] == "sucesso"
         assert len(resp["acordaos"]) == 1
 
-    def test_data_minima_default_eh_2018(self):
-        """data_minima default da rota deve ser 2018-01-01."""
-        from App.routes import jurisprudencia as route
-        from App.database import JURISPRUDENCIA_DATA_MINIMA_DEFAULT
+    def test_data_minima_default_eh_2000(self):
+        """data_minima default da rota deve ser 2000-01-01.
 
-        assert JURISPRUDENCIA_DATA_MINIMA_DEFAULT == "2018-01-01"
+        PR22: rebaixado de 2018-01-01 pra incluir Sumulas TST paradigma
+        (Sum. 437/2012, Sum. 32/2003, Sum. 14/2003, etc) que continuam
+        vigentes. Pra excluir decisao obsoleta, passar data_minima
+        explicito no payload da rota.
+        """
+        from App.database import JURISPRUDENCIA_DATA_MINIMA_DEFAULT
+        from App.routes import jurisprudencia as route
+
+        assert JURISPRUDENCIA_DATA_MINIMA_DEFAULT == "2000-01-01"
 
         captured = {}
         def fake_sem(**kw):
@@ -198,8 +204,8 @@ class TestRotaBuscarJurisprudencia:
                 )
             )
 
-        assert captured["sem"]["data_minima"] == "2018-01-01"
-        assert captured["lex"]["data_minima"] == "2018-01-01"
+        assert captured["sem"]["data_minima"] == "2000-01-01"
+        assert captured["lex"]["data_minima"] == "2000-01-01"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

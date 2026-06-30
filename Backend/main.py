@@ -56,6 +56,7 @@ from App.routes import (  # noqa: E402
     edicao,
     feedback,
     jurisprudencia,
+    jurisprudencia_admin,
     legislacao,
     rag,
     suporte,
@@ -129,6 +130,9 @@ app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 app.include_router(rag.router, prefix="/api", tags=["RAG Semantico"])
 app.include_router(legislacao.router, prefix="/api", tags=["Legislacao"])
 app.include_router(jurisprudencia.router, prefix="/api", tags=["Jurisprudencia"])
+app.include_router(
+    jurisprudencia_admin.router, prefix="/api", tags=["Jurisprudencia Admin"]
+)
 app.include_router(datajud.router, prefix="/api", tags=["DataJud"])
 
 

@@ -1,6 +1,7 @@
 // Barra de navegacao principal com menu de paginas e estado de autenticacao.
 import React from "react";
-import { Button, Container, Nav, Navbar } from "react-bootstrap";
+import { Badge, Button, Container, Nav, Navbar } from "react-bootstrap";
+import { ADMIN_EMAILS_FRONTEND } from "../config/api";
 
 /**
  * Gera iniciais para o avatar textual no menu superior.
@@ -16,6 +17,11 @@ function initialsFromName(name) {
 
 /**
  * Barra de navegacao principal com estado de autenticacao.
+ *
+ * PR22: menu "Jurisprudencia" aparece so se authUser.email estiver em
+ * VITE_ADMIN_EMAILS. Backend (`_is_admin`) e a unica autoridade; frontend
+ * so esconde por UX. Se atacante chamar /api/admin/jurisprudencia/criar
+ * direto, recebe 403.
  */
 export default function AppNavbar({
   currentPage,
@@ -25,11 +31,17 @@ export default function AppNavbar({
   onOpenSignup,
   onLogout,
 }) {
+  const emailAtual = (authUser?.email || "").toLowerCase();
+  const isAdmin = emailAtual && ADMIN_EMAILS_FRONTEND.includes(emailAtual);
+
   const menuItems = [
     { id: "inicio", label: "Início" },
     { id: "painel", label: "Formulário IA" },
     { id: "dashboard", label: "Dashboard" },
     { id: "contato", label: "Suporte" },
+    ...(isAdmin
+      ? [{ id: "jurisprudencia", label: "Jurisprudência", adminBadge: true }]
+      : []),
   ];
 
   return (
@@ -59,6 +71,11 @@ export default function AppNavbar({
                 className={`menu-link-btn ${currentPage === item.id ? "is-active" : ""}`}
               >
                 {item.label}
+                {item.adminBadge && (
+                  <Badge bg="warning" text="dark" className="ms-1">
+                    admin
+                  </Badge>
+                )}
               </Nav.Link>
             ))}
           </Nav>

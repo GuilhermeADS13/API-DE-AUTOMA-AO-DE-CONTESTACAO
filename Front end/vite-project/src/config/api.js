@@ -10,6 +10,14 @@ export const DASHBOARD_SUMMARY_API_URL =
   import.meta.env.VITE_DASHBOARD_SUMMARY_ENDPOINT || `${API_BASE_URL}/contestacoes/resumo`;
 export const PETICAO_API_URL =
   import.meta.env.VITE_PETICAO_ENDPOINT || `${API_BASE_URL}/contestar-por-peticao`;
+// PR22 - cadastro manual de jurisprudencia paradigma (admin)
+export const JURISPRUDENCIA_CRIAR_URL =
+  import.meta.env.VITE_JURISPRUDENCIA_CRIAR_ENDPOINT
+  || `${API_BASE_URL}/admin/jurisprudencia/criar`;
+export const ADMIN_EMAILS_FRONTEND = (import.meta.env.VITE_ADMIN_EMAILS || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 // PR5 (Guia Tecnico v3) — HiL e Observabilidade
 export function confirmarExtracaoUrl(contestacaoId) {

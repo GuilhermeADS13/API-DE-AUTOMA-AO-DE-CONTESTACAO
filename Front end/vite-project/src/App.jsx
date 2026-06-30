@@ -9,6 +9,7 @@ import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
 import DashboardSection from "./components/DashboardSection";
 import SupportSection from "./components/SupportSection";
+import JurisprudenciaForm from "./components/JurisprudenciaForm";
 import AppFooter from "./components/AppFooter";
 import RevisaoHumanaModal from "./components/RevisaoHumanaModal";
 import {
@@ -2101,6 +2102,10 @@ export default function App() {
           onChange={handleSupportChange}
           onSubmit={handleSupportSubmit}
         />
+      )}
+
+      {currentPage === "jurisprudencia" && (
+        <JurisprudenciaForm getAccessToken={getSupabaseAccessToken} />
       )}
 
       <AppFooter />
