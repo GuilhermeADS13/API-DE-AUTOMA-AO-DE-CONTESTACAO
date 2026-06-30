@@ -1810,6 +1810,201 @@ def buscar_jurisprudencia_lexical(
     return [_row_to_jurisprudencia(row) for row in rows]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin CRUD em jurisprudencia_externa (PR23)
+# Usado pela UI "Listar/Editar/Excluir Jurisprudencia". Auth pelo endpoint;
+# helpers aqui sao puros (sem validacao de admin — quem chama eh responsavel).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _row_to_jurisprudencia_full(row: tuple) -> dict[str, Any]:
+    """Mapper completo (com id + criado_em) — usado nas rotas CRUD admin.
+
+    Diferente de `_row_to_jurisprudencia` (usado nas buscas), este preserva
+    o id da linha pra permitir update/delete e mostra metadados internos.
+    """
+    return {
+        "id": int(row[0]),
+        "tribunal": str(row[1] or ""),
+        "tipo_decisao": str(row[2] or ""),
+        "numero_processo": str(row[3] or ""),
+        "relator": str(row[4] or "") if row[4] else None,
+        "data_julgamento": _iso_or_str(row[5]),
+        "ementa": str(row[6] or ""),
+        "tese_firmada": str(row[7] or "") if row[7] else None,
+        "area_juridica": str(row[8] or "") if row[8] else None,
+        "peso_relevancia": int(row[9] or 5),
+        "fonte_url": str(row[10] or "") if row[10] else None,
+        "criado_em": _iso_or_str(row[11]),
+        "scraped_at": _iso_or_str(row[12]),
+        "tem_embedding": bool(row[13]),
+    }
+
+
+_JURISPRUDENCIA_COLS_FULL = (
+    "id, tribunal, tipo_decisao, numero_processo, relator, data_julgamento, "
+    "ementa, tese_firmada, area_juridica, peso_relevancia, fonte_url, "
+    "criado_em, scraped_at, (embedding IS NOT NULL) AS tem_embedding"
+)
+
+
+def listar_jurisprudencia(
+    *,
+    limit: int = 25,
+    offset: int = 0,
+    tribunal: str | None = None,
+    area_juridica: str | None = None,
+    busca: str | None = None,
+) -> dict[str, Any]:
+    """Lista jurisprudencia paginada com filtros opcionais.
+
+    Retorna {items, total, limit, offset, has_more}.
+
+    Filtros:
+    - tribunal: match exato (case-insensitive)
+    - area_juridica: match exato (validado contra AREAS_JURIDICAS_CANONICAS)
+    - busca: ILIKE no numero_processo OU ementa OU relator
+    """
+    _ensure_db_initialized()
+    safe_limit = max(1, min(int(limit), 100))
+    safe_offset = max(0, int(offset))
+    area = area_juridica if area_juridica in AREAS_JURIDICAS_CANONICAS else None
+    tribunal_norm = tribunal.strip() if tribunal else None
+    busca_norm = f"%{busca.strip()}%" if busca and busca.strip() else None
+
+    where_clauses = ["1=1"]
+    params: list[Any] = []
+    if tribunal_norm:
+        where_clauses.append("UPPER(tribunal) = UPPER(%s)")
+        params.append(tribunal_norm)
+    if area:
+        where_clauses.append("area_juridica = %s")
+        params.append(area)
+    if busca_norm:
+        where_clauses.append(
+            "(numero_processo ILIKE %s OR ementa ILIKE %s OR coalesce(relator, '') ILIKE %s)"
+        )
+        params.extend([busca_norm, busca_norm, busca_norm])
+
+    where_sql = " AND ".join(where_clauses)
+
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            # Total (sem limit/offset)
+            cursor.execute(
+                f"SELECT count(*) FROM jurisprudencia_externa WHERE {where_sql}",
+                params,
+            )
+            total = int(cursor.fetchone()[0])
+
+            # Pagina atual
+            cursor.execute(
+                f"""
+                SELECT {_JURISPRUDENCIA_COLS_FULL}
+                FROM jurisprudencia_externa
+                WHERE {where_sql}
+                ORDER BY peso_relevancia DESC, data_julgamento DESC NULLS LAST, id DESC
+                LIMIT %s OFFSET %s
+                """,
+                params + [safe_limit, safe_offset],
+            )
+            rows = cursor.fetchall()
+
+    items = [_row_to_jurisprudencia_full(r) for r in rows]
+    return {
+        "items": items,
+        "total": total,
+        "limit": safe_limit,
+        "offset": safe_offset,
+        "has_more": safe_offset + len(items) < total,
+    }
+
+
+def obter_jurisprudencia(jurisprudencia_id: int) -> dict[str, Any] | None:
+    """Retorna 1 linha por id ou None se nao existir."""
+    _ensure_db_initialized()
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT {_JURISPRUDENCIA_COLS_FULL}
+                FROM jurisprudencia_externa
+                WHERE id = %s
+                """,
+                (int(jurisprudencia_id),),
+            )
+            row = cursor.fetchone()
+    return _row_to_jurisprudencia_full(row) if row else None
+
+
+_JURISPRUDENCIA_UPDATABLE = {
+    "tribunal", "tipo_decisao", "numero_processo", "relator",
+    "data_julgamento", "ementa", "tese_firmada", "area_juridica",
+    "peso_relevancia", "fonte_url",
+}
+
+
+def atualizar_jurisprudencia(
+    jurisprudencia_id: int,
+    *,
+    campos: dict[str, Any],
+    embedding: list[float] | None = None,
+) -> bool:
+    """Atualiza colunas indicadas em `campos` (chaves devem estar em
+    _JURISPRUDENCIA_UPDATABLE) + opcionalmente o embedding.
+
+    Retorna True se uma linha foi atualizada; False se id nao existe.
+    Chaves desconhecidas no dict sao ignoradas silenciosamente.
+    """
+    _ensure_db_initialized()
+    sets: list[str] = []
+    params: list[Any] = []
+
+    for k, v in (campos or {}).items():
+        if k not in _JURISPRUDENCIA_UPDATABLE:
+            continue
+        if k == "area_juridica":
+            # mesma normalizacao do upsert
+            v = v if v in AREAS_JURIDICAS_CANONICAS else None
+        if k == "peso_relevancia" and v is not None:
+            v = max(1, min(int(v), 10))
+        if k == "data_julgamento":
+            sets.append("data_julgamento = %s::date")
+        else:
+            sets.append(f"{k} = %s")
+        params.append(v)
+
+    if embedding is not None:
+        sets.append("embedding = %s::vector")
+        params.append(_format_pgvector(embedding))
+
+    if not sets:
+        return False
+
+    params.append(int(jurisprudencia_id))
+    sql = f"UPDATE jurisprudencia_externa SET {', '.join(sets)} WHERE id = %s"
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            atualizou = cursor.rowcount > 0
+        connection.commit()
+    return atualizou
+
+
+def deletar_jurisprudencia(jurisprudencia_id: int) -> bool:
+    """Remove linha por id. Retorna True se removeu, False se nao existia."""
+    _ensure_db_initialized()
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM jurisprudencia_externa WHERE id = %s",
+                (int(jurisprudencia_id),),
+            )
+            removeu = cursor.rowcount > 0
+        connection.commit()
+    return removeu
+
+
 def salvar_exemplar(
     tipo_acao: str,
     tese_central: str,

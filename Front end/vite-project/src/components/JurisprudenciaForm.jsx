@@ -13,7 +13,7 @@ import {
   Row,
   Spinner,
 } from "react-bootstrap";
-import { JURISPRUDENCIA_CRIAR_URL } from "../config/api";
+import { JURISPRUDENCIA_CRIAR_URL, jurisprudenciaIdUrl } from "../config/api";
 
 const TRIBUNAIS = [
   "STF",
@@ -84,14 +84,38 @@ function validar(form) {
 }
 
 /**
- * Tela admin "Adicionar Jurisprudencia" — POST /api/admin/jurisprudencia/criar.
+ * Form admin de jurisprudencia (PR22 cadastrar + PR23 editar).
  *
  * Props:
  *  - getAccessToken: () => Promise<string|null> — extrai JWT da sessao Supabase.
- *    Mesmo pattern do `getSupabaseAccessToken` usado no App.jsx.
+ *  - editingItem?: object — se passado, modo edicao (PATCH em vez de POST).
+ *    Espera shape: {id, tribunal, numero_processo, ementa, ...} igual ao backend.
+ *  - onSaved?: (resultadoBackend) => void — callback apos sucesso, util pra
+ *    lista de pais atualizar sem fetch extra.
+ *  - compact?: boolean — versao mais densa (uso em modal, sem Card wrapper).
  */
-export default function JurisprudenciaForm({ getAccessToken }) {
-  const [form, setForm] = useState(ESTADO_INICIAL);
+export default function JurisprudenciaForm({
+  getAccessToken,
+  editingItem = null,
+  onSaved,
+  compact = false,
+}) {
+  const isEditMode = Boolean(editingItem?.id);
+  const [form, setForm] = useState(() => {
+    if (!editingItem) return ESTADO_INICIAL;
+    return {
+      tribunal: editingItem.tribunal || "TST",
+      tipo_decisao: editingItem.tipo_decisao || "Acordao",
+      numero_processo: editingItem.numero_processo || "",
+      relator: editingItem.relator || "",
+      data_julgamento: editingItem.data_julgamento || "",
+      ementa: editingItem.ementa || "",
+      tese_firmada: editingItem.tese_firmada || "",
+      area_juridica: editingItem.area_juridica || "trabalhista",
+      peso_relevancia: editingItem.peso_relevancia ?? 5,
+      fonte_url: editingItem.fonte_url || "",
+    };
+  });
   const [erros, setErros] = useState({});
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -149,8 +173,11 @@ export default function JurisprudenciaForm({ getAccessToken }) {
       if (form.area_juridica) payload.area_juridica = form.area_juridica;
       if (form.fonte_url?.trim()) payload.fonte_url = form.fonte_url.trim();
 
-      const resp = await fetch(JURISPRUDENCIA_CRIAR_URL, {
-        method: "POST",
+      const url = isEditMode
+        ? jurisprudenciaIdUrl(editingItem.id)
+        : JURISPRUDENCIA_CRIAR_URL;
+      const resp = await fetch(url, {
+        method: isEditMode ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -183,7 +210,12 @@ export default function JurisprudenciaForm({ getAccessToken }) {
             data.mensagem
             || `${payload.tribunal} ${payload.numero_processo} salvo com sucesso.`,
         });
-        setForm(ESTADO_INICIAL);
+        if (!isEditMode) {
+          setForm(ESTADO_INICIAL);
+        }
+        if (typeof onSaved === "function") {
+          onSaved(data);
+        }
       }
     } catch (err) {
       setFeedback({
@@ -195,22 +227,26 @@ export default function JurisprudenciaForm({ getAccessToken }) {
     }
   };
 
-  return (
-    <Container fluid className="py-4" style={{ maxWidth: 960 }}>
-      <Card className="shadow-sm">
-        <Card.Body>
+  const corpo = (
+    <>
+      {!compact && (
+        <>
           <div className="d-flex align-items-center gap-2 mb-3">
-            <h4 className="mb-0">Adicionar Jurisprudencia</h4>
-            <Badge bg="warning" text="dark">
-              Admin
-            </Badge>
+            <h4 className="mb-0">
+              {isEditMode ? "Editar Jurisprudencia" : "Adicionar Jurisprudencia"}
+            </h4>
+            <Badge bg="warning" text="dark">Admin</Badge>
+            {isEditMode && (
+              <Badge bg="info">id={editingItem.id}</Badge>
+            )}
           </div>
           <p className="text-muted">
-            Cadastre acordaos paradigma que o RAG vai citar nas defesas. A
-            ementa entra completa, com embedding gerado automaticamente.
-            Idempotente: re-submeter mesmo (tribunal, numero) atualiza o
-            registro existente.
+            {isEditMode
+              ? "Edite os campos abaixo. Embedding sera regenerado automaticamente."
+              : "Cadastre acordaos paradigma que o RAG vai citar nas defesas. A ementa entra completa, com embedding gerado automaticamente. Idempotente: re-submeter mesmo (tribunal, numero) atualiza o registro existente."}
           </p>
+        </>
+      )}
 
           {feedback && (
             <Alert
@@ -403,12 +439,22 @@ export default function JurisprudenciaForm({ getAccessToken }) {
                     Salvando...
                   </>
                 ) : (
-                  "Salvar paradigma"
+                  isEditMode ? "Salvar alteracoes" : "Salvar paradigma"
                 )}
               </Button>
             </div>
           </Form>
-        </Card.Body>
+    </>
+  );
+
+  if (compact) {
+    return <div>{corpo}</div>;
+  }
+
+  return (
+    <Container fluid className="py-4" style={{ maxWidth: 960 }}>
+      <Card className="shadow-sm">
+        <Card.Body>{corpo}</Card.Body>
       </Card>
     </Container>
   );

@@ -9,7 +9,9 @@ import StatsSection from "./components/StatsSection";
 import MainPanelSection from "./components/MainPanelSection";
 import DashboardSection from "./components/DashboardSection";
 import SupportSection from "./components/SupportSection";
-import JurisprudenciaForm from "./components/JurisprudenciaForm";
+import JurisprudenciaAdminPage from "./components/JurisprudenciaAdminPage";
+import JurisprudenciaQuickAddFab from "./components/JurisprudenciaQuickAddFab";
+import { ADMIN_EMAILS_FRONTEND } from "./config/api";
 import AppFooter from "./components/AppFooter";
 import RevisaoHumanaModal from "./components/RevisaoHumanaModal";
 import {
@@ -2105,8 +2107,17 @@ export default function App() {
       )}
 
       {currentPage === "jurisprudencia" && (
-        <JurisprudenciaForm getAccessToken={getSupabaseAccessToken} />
+        <JurisprudenciaAdminPage getAccessToken={getSupabaseAccessToken} />
       )}
+
+      <JurisprudenciaQuickAddFab
+        getAccessToken={getSupabaseAccessToken}
+        visible={Boolean(
+          authUser?.email
+          && ADMIN_EMAILS_FRONTEND.includes(String(authUser.email).toLowerCase())
+          && currentPage !== "jurisprudencia"
+        )}
+      />
 
       <AppFooter />
 

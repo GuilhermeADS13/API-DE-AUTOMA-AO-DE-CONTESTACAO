@@ -229,3 +229,160 @@ def test_re_submissao_mesmo_acordao_continua_201(auth_como_admin):
     assert resp1.status_code == 201
     assert resp2.status_code == 201
     assert mock_upsert.call_count == 2
+
+
+def _resposta_listar(items, total=None):
+    """Helper: shape de retorno do listar_jurisprudencia."""
+    return {
+        "items": items,
+        "total": total if total is not None else len(items),
+        "limit": 25,
+        "offset": 0,
+        "has_more": False,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PR23 — GET listar / GET id / PATCH / DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_listar_sem_auth_bloqueia():
+    resp = client.get("/api/admin/jurisprudencia/listar")
+    assert resp.status_code in (401, 403)
+
+
+def test_listar_nao_admin_403(auth_como_usuario):
+    with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}):
+        resp = client.get("/api/admin/jurisprudencia/listar")
+    assert resp.status_code == 403
+
+
+def test_listar_admin_retorna_payload_paginado(auth_como_admin):
+    fake_items = [
+        {"id": 1, "tribunal": "TST", "numero_processo": "Sumula 437",
+         "ementa": "x" * 100, "peso_relevancia": 10},
+        {"id": 2, "tribunal": "STF", "numero_processo": "ADPF 324",
+         "ementa": "y" * 100, "peso_relevancia": 10},
+    ]
+    fake_resp = {
+        "items": fake_items, "total": 2, "limit": 25, "offset": 0, "has_more": False,
+    }
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.listar_jurisprudencia", return_value=fake_resp),
+    ):
+        resp = client.get("/api/admin/jurisprudencia/listar?limit=25&offset=0")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+    assert data["has_more"] is False
+
+
+def test_listar_propaga_filtros(auth_como_admin):
+    captured = {}
+    def fake_listar(**kw):
+        captured.update(kw)
+        return _resposta_listar([])
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.listar_jurisprudencia", side_effect=fake_listar),
+    ):
+        resp = client.get(
+            "/api/admin/jurisprudencia/listar"
+            "?tribunal=TST&area_juridica=trabalhista&busca=intervalo&limit=10&offset=20"
+        )
+    assert resp.status_code == 200
+    assert captured["tribunal"] == "TST"
+    assert captured["area_juridica"] == "trabalhista"
+    assert captured["busca"] == "intervalo"
+    assert captured["limit"] == 10
+    assert captured["offset"] == 20
+
+
+def test_obter_404_quando_inexistente(auth_como_admin):
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.obter_jurisprudencia", return_value=None),
+    ):
+        resp = client.get("/api/admin/jurisprudencia/9999")
+    assert resp.status_code == 404
+
+
+def test_obter_200_quando_existe(auth_como_admin):
+    item = {"id": 42, "tribunal": "TST", "numero_processo": "Sumula 437",
+            "ementa": "x" * 100, "peso_relevancia": 10}
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.obter_jurisprudencia", return_value=item),
+    ):
+        resp = client.get("/api/admin/jurisprudencia/42")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == 42
+
+
+def test_patch_404_quando_inexistente(auth_como_admin):
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.obter_jurisprudencia", return_value=None),
+    ):
+        resp = client.patch(
+            "/api/admin/jurisprudencia/9999", json=_payload_minimo(),
+        )
+    assert resp.status_code == 404
+
+
+def test_patch_200_atualiza_existente(auth_como_admin):
+    existente = {"id": 42, "tribunal": "TST", "numero_processo": "X",
+                 "ementa": "y" * 100, "peso_relevancia": 5}
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.obter_jurisprudencia", return_value=existente),
+        patch(
+            "App.routes.jurisprudencia_admin.gerar_embedding",
+            return_value=[0.1] * 384,
+        ),
+        patch("App.database.atualizar_jurisprudencia", return_value=True) as upd,
+    ):
+        resp = client.patch(
+            "/api/admin/jurisprudencia/42",
+            json=_payload_minimo(peso_relevancia=8),
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == 42
+    assert data["embedding_gerado"] is True
+    upd.assert_called_once()
+    kwargs = upd.call_args.kwargs
+    assert kwargs["campos"]["peso_relevancia"] == 8
+
+
+def test_patch_payload_invalido_422(auth_como_admin):
+    with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}):
+        resp = client.patch(
+            "/api/admin/jurisprudencia/42", json={"tribunal": "TST"},
+        )
+    assert resp.status_code == 422
+
+
+def test_delete_404_quando_inexistente(auth_como_admin):
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.deletar_jurisprudencia", return_value=False),
+    ):
+        resp = client.delete("/api/admin/jurisprudencia/9999")
+    assert resp.status_code == 404
+
+
+def test_delete_200_quando_existia(auth_como_admin):
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.deletar_jurisprudencia", return_value=True),
+    ):
+        resp = client.delete("/api/admin/jurisprudencia/42")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == 42
+
+

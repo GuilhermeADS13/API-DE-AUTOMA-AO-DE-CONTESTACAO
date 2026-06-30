@@ -14,6 +14,11 @@ export const PETICAO_API_URL =
 export const JURISPRUDENCIA_CRIAR_URL =
   import.meta.env.VITE_JURISPRUDENCIA_CRIAR_ENDPOINT
   || `${API_BASE_URL}/admin/jurisprudencia/criar`;
+// PR23 - CRUD admin (listar/edit/delete)
+export const JURISPRUDENCIA_LISTAR_URL = `${API_BASE_URL}/admin/jurisprudencia/listar`;
+export function jurisprudenciaIdUrl(id) {
+  return `${API_BASE_URL}/admin/jurisprudencia/${encodeURIComponent(id)}`;
+}
 export const ADMIN_EMAILS_FRONTEND = (import.meta.env.VITE_ADMIN_EMAILS || "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
