@@ -39,6 +39,9 @@ class JurisprudenciaManual(BaseModel):
     area_juridica: Annotated[str | None, Field(default=None, max_length=40)] = None
     peso_relevancia: Annotated[int, Field(default=5, ge=1, le=10)] = 5
     fonte_url: Annotated[str | None, Field(default=None, max_length=500)] = None
+    # PR24: texto_integral opcional (so pra consulta humana / reranker futuro,
+    # NAO entra no embedding). Max 200k chars (~200 KB, cobre acordaos gigantes).
+    texto_integral: Annotated[str | None, Field(default=None, max_length=200000)] = None
 
     @field_validator("tribunal", "numero_processo", "ementa")
     @classmethod
@@ -48,7 +51,7 @@ class JurisprudenciaManual(BaseModel):
             raise ValueError("Campo obrigatorio nao pode ser vazio apos strip.")
         return texto
 
-    @field_validator("relator", "tese_firmada", "area_juridica", "fonte_url")
+    @field_validator("relator", "tese_firmada", "area_juridica", "fonte_url", "texto_integral")
     @classmethod
     def _strip_opcional(cls, value: str | None) -> str | None:
         if value is None:

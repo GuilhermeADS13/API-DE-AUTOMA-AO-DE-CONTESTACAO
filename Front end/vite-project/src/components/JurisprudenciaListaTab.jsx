@@ -292,6 +292,11 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
                       !
                     </Badge>
                   )}
+                  {item.tem_texto_integral && (
+                    <Badge bg="info" className="ms-1" title="Texto integral disponivel">
+                      TI
+                    </Badge>
+                  )}
                 </td>
                 <td>
                   <Button

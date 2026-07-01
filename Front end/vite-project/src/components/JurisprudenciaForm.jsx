@@ -60,7 +60,10 @@ const ESTADO_INICIAL = {
   area_juridica: "trabalhista",
   peso_relevancia: 5,
   fonte_url: "",
+  texto_integral: "",
 };
+
+const MAX_TEXTO_INTEGRAL = 200_000;
 
 function validar(form) {
   const erros = {};
@@ -79,6 +82,9 @@ function validar(form) {
     (form.peso_relevancia < 1 || form.peso_relevancia > 10)
   ) {
     erros.peso_relevancia = "Peso deve estar entre 1 e 10";
+  }
+  if (form.texto_integral && form.texto_integral.length > MAX_TEXTO_INTEGRAL) {
+    erros.texto_integral = `Texto integral acima de ${MAX_TEXTO_INTEGRAL.toLocaleString()} caracteres`;
   }
   return erros;
 }
@@ -114,6 +120,7 @@ export default function JurisprudenciaForm({
       area_juridica: editingItem.area_juridica || "trabalhista",
       peso_relevancia: editingItem.peso_relevancia ?? 5,
       fonte_url: editingItem.fonte_url || "",
+      texto_integral: editingItem.texto_integral || "",
     };
   });
   const [erros, setErros] = useState({});
@@ -172,6 +179,7 @@ export default function JurisprudenciaForm({
       if (form.tese_firmada?.trim()) payload.tese_firmada = form.tese_firmada.trim();
       if (form.area_juridica) payload.area_juridica = form.area_juridica;
       if (form.fonte_url?.trim()) payload.fonte_url = form.fonte_url.trim();
+      if (form.texto_integral?.trim()) payload.texto_integral = form.texto_integral.trim();
 
       const url = isEditMode
         ? jurisprudenciaIdUrl(editingItem.id)
@@ -402,6 +410,30 @@ export default function JurisprudenciaForm({
                   <Form.Text className="text-muted">
                     Usada como destaque no prompt do Gerador. Deixe vazia se a
                     ementa ja for sucinta.
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              <Col xs={12}>
+                <Form.Group>
+                  <Form.Label>
+                    Texto Integral (opcional — nao entra no RAG)
+                  </Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={4}
+                    placeholder="Cole o texto completo do acordao aqui se quiser guardar pra consulta humana futura. NAO afeta o embedding (o RAG continua usando so a ementa)."
+                    value={form.texto_integral}
+                    onChange={handleChange("texto_integral")}
+                    isInvalid={!!erros.texto_integral}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {erros.texto_integral}
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    {form.texto_integral
+                      ? `${form.texto_integral.length.toLocaleString()} / ${MAX_TEXTO_INTEGRAL.toLocaleString()} caracteres`
+                      : "Deixe vazio se so quer indexar a ementa. Util pra reranker futuro (PR B)."}
                   </Form.Text>
                 </Form.Group>
               </Col>

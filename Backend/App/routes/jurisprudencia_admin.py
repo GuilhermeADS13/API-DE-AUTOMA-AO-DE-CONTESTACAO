@@ -91,6 +91,7 @@ async def criar_jurisprudencia(
             peso_relevancia=payload.peso_relevancia,
             fonte_url=payload.fonte_url,
             embedding=embedding,
+            texto_integral=payload.texto_integral,
         )
     except Exception as err:
         logger.error(
@@ -216,6 +217,7 @@ async def atualizar(
                 "area_juridica": payload.area_juridica,
                 "peso_relevancia": payload.peso_relevancia,
                 "fonte_url": payload.fonte_url,
+                "texto_integral": payload.texto_integral,
             },
             embedding=embedding,
         )

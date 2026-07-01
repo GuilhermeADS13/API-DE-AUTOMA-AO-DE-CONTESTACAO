@@ -1666,11 +1666,16 @@ def upsert_jurisprudencia(
     peso_relevancia: int = 5,
     fonte_url: str | None = None,
     embedding: list[float] | None = None,
+    texto_integral: str | None = None,
 ) -> None:
     """UPSERT em public.jurisprudencia_externa por (tribunal, numero_processo).
 
     Usado pelo scraper. Idempotente — re-scraping atualiza ementa/embedding
     mas preserva criado_em. scraped_at sempre vira NOW() no UPSERT.
+
+    `texto_integral` (PR24): opcional, so pra consulta humana / reranker
+    futuro. NAO entra no embedding do RAG (embedding continua sendo gerado
+    fora deste helper sobre ementa + tese_firmada).
     """
     if not tribunal or not numero_processo or not ementa:
         return
@@ -1685,8 +1690,8 @@ def upsert_jurisprudencia(
                 INSERT INTO jurisprudencia_externa
                   (tribunal, tipo_decisao, numero_processo, relator,
                    data_julgamento, ementa, tese_firmada, area_juridica,
-                   peso_relevancia, fonte_url, embedding, scraped_at)
-                VALUES (%s, %s, %s, %s, %s::date, %s, %s, %s, %s, %s, %s::vector, now())
+                   peso_relevancia, fonte_url, embedding, texto_integral, scraped_at)
+                VALUES (%s, %s, %s, %s, %s::date, %s, %s, %s, %s, %s, %s::vector, %s, now())
                 ON CONFLICT (tribunal, numero_processo) DO UPDATE
                   SET tipo_decisao = EXCLUDED.tipo_decisao,
                       relator = EXCLUDED.relator,
@@ -1697,12 +1702,13 @@ def upsert_jurisprudencia(
                       peso_relevancia = EXCLUDED.peso_relevancia,
                       fonte_url = EXCLUDED.fonte_url,
                       embedding = EXCLUDED.embedding,
+                      texto_integral = EXCLUDED.texto_integral,
                       scraped_at = now()
                 """,
                 (
                     tribunal, tipo_decisao, numero_processo, relator,
                     data_julgamento, ementa, tese_firmada, area,
-                    peso, fonte_url, vec_str,
+                    peso, fonte_url, vec_str, texto_integral,
                 ),
             )
         connection.commit()
@@ -1817,13 +1823,16 @@ def buscar_jurisprudencia_lexical(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _row_to_jurisprudencia_full(row: tuple) -> dict[str, Any]:
+def _row_to_jurisprudencia_full(row: tuple, incluir_texto: bool = False) -> dict[str, Any]:
     """Mapper completo (com id + criado_em) — usado nas rotas CRUD admin.
 
     Diferente de `_row_to_jurisprudencia` (usado nas buscas), este preserva
     o id da linha pra permitir update/delete e mostra metadados internos.
+
+    Se `incluir_texto=True`, retorna `texto_integral` extra na posicao [14].
+    Rota /listar mantem False (payload gigante); /{id} usa True.
     """
-    return {
+    base = {
         "id": int(row[0]),
         "tribunal": str(row[1] or ""),
         "tipo_decisao": str(row[2] or ""),
@@ -1839,13 +1848,26 @@ def _row_to_jurisprudencia_full(row: tuple) -> dict[str, Any]:
         "scraped_at": _iso_or_str(row[12]),
         "tem_embedding": bool(row[13]),
     }
+    # row[14] eh sempre o boolean `(texto_integral IS NOT NULL) AS tem_texto_integral`
+    # (posicao final de _JURISPRUDENCIA_COLS_LIST).
+    base["tem_texto_integral"] = bool(row[14]) if len(row) > 14 else False
+    if incluir_texto:
+        # row[15] eh o texto_integral (colado ao _COLS_LIST na _COLS_FULL).
+        texto = row[15] if len(row) > 15 else None
+        base["texto_integral"] = str(texto) if texto else None
+    return base
 
 
-_JURISPRUDENCIA_COLS_FULL = (
+# Colunas base — sem texto_integral (payload leve pra rota /listar)
+_JURISPRUDENCIA_COLS_LIST = (
     "id, tribunal, tipo_decisao, numero_processo, relator, data_julgamento, "
     "ementa, tese_firmada, area_juridica, peso_relevancia, fonte_url, "
-    "criado_em, scraped_at, (embedding IS NOT NULL) AS tem_embedding"
+    "criado_em, scraped_at, (embedding IS NOT NULL) AS tem_embedding, "
+    "(texto_integral IS NOT NULL) AS tem_texto_integral"
 )
+
+# Colunas completas — inclui texto_integral (payload pesado, so pra GET /{id})
+_JURISPRUDENCIA_COLS_FULL = _JURISPRUDENCIA_COLS_LIST + ", texto_integral"
 
 
 def listar_jurisprudencia(
@@ -1897,10 +1919,10 @@ def listar_jurisprudencia(
             )
             total = int(cursor.fetchone()[0])
 
-            # Pagina atual
+            # Pagina atual (payload leve — sem texto_integral)
             cursor.execute(
                 f"""
-                SELECT {_JURISPRUDENCIA_COLS_FULL}
+                SELECT {_JURISPRUDENCIA_COLS_LIST}
                 FROM jurisprudencia_externa
                 WHERE {where_sql}
                 ORDER BY peso_relevancia DESC, data_julgamento DESC NULLS LAST, id DESC
@@ -1910,7 +1932,7 @@ def listar_jurisprudencia(
             )
             rows = cursor.fetchall()
 
-    items = [_row_to_jurisprudencia_full(r) for r in rows]
+    items = [_row_to_jurisprudencia_full(r, incluir_texto=False) for r in rows]
     return {
         "items": items,
         "total": total,
@@ -1921,7 +1943,7 @@ def listar_jurisprudencia(
 
 
 def obter_jurisprudencia(jurisprudencia_id: int) -> dict[str, Any] | None:
-    """Retorna 1 linha por id ou None se nao existir."""
+    """Retorna 1 linha por id (com texto_integral) ou None se nao existir."""
     _ensure_db_initialized()
     with _get_connection() as connection:
         with connection.cursor() as cursor:
@@ -1934,13 +1956,13 @@ def obter_jurisprudencia(jurisprudencia_id: int) -> dict[str, Any] | None:
                 (int(jurisprudencia_id),),
             )
             row = cursor.fetchone()
-    return _row_to_jurisprudencia_full(row) if row else None
+    return _row_to_jurisprudencia_full(row, incluir_texto=True) if row else None
 
 
 _JURISPRUDENCIA_UPDATABLE = {
     "tribunal", "tipo_decisao", "numero_processo", "relator",
     "data_julgamento", "ementa", "tese_firmada", "area_juridica",
-    "peso_relevancia", "fonte_url",
+    "peso_relevancia", "fonte_url", "texto_integral",
 }
 
 

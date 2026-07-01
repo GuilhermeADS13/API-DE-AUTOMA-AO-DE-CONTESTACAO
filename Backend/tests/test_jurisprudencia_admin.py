@@ -375,6 +375,67 @@ def test_delete_404_quando_inexistente(auth_como_admin):
     assert resp.status_code == 404
 
 
+def test_texto_integral_opcional_no_criar(auth_como_admin):
+    """PR24: payload SEM texto_integral segue funcionando (default None)."""
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.routes.jurisprudencia_admin.gerar_embedding", return_value=[0.0] * 384),
+        patch("App.database.upsert_jurisprudencia") as mock_upsert,
+    ):
+        resp = client.post(
+            "/api/admin/jurisprudencia/criar",
+            json=_payload_minimo(),  # sem texto_integral
+        )
+    assert resp.status_code == 201
+    kwargs = mock_upsert.call_args.kwargs
+    assert kwargs["texto_integral"] is None
+
+
+def test_texto_integral_5kb_aceito(auth_como_admin):
+    """PR24: texto de 5 KB passa validacao e chega ao upsert intacto."""
+    texto = "conteudo do acordao " * 300  # ~6 KB
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.routes.jurisprudencia_admin.gerar_embedding", return_value=[0.0] * 384),
+        patch("App.database.upsert_jurisprudencia") as mock_upsert,
+    ):
+        resp = client.post(
+            "/api/admin/jurisprudencia/criar",
+            json=_payload_minimo(texto_integral=texto),
+        )
+    assert resp.status_code == 201
+    kwargs = mock_upsert.call_args.kwargs
+    assert kwargs["texto_integral"] == texto.strip()
+
+
+def test_texto_integral_acima_do_limite_retorna_422(auth_como_admin):
+    """PR24: 200_001 chars estoura Field(max_length=200000) e retorna 422."""
+    with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}):
+        resp = client.post(
+            "/api/admin/jurisprudencia/criar",
+            json=_payload_minimo(texto_integral="x" * 200_001),
+        )
+    assert resp.status_code == 422
+
+
+def test_patch_atualiza_texto_integral(auth_como_admin):
+    """PATCH aceita texto_integral e propaga pra atualizar_jurisprudencia."""
+    existente = {"id": 42, "tribunal": "TST", "numero_processo": "X",
+                 "ementa": "y" * 100, "peso_relevancia": 5}
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.database.obter_jurisprudencia", return_value=existente),
+        patch("App.routes.jurisprudencia_admin.gerar_embedding", return_value=[0.1] * 384),
+        patch("App.database.atualizar_jurisprudencia", return_value=True) as upd,
+    ):
+        resp = client.patch(
+            "/api/admin/jurisprudencia/42",
+            json=_payload_minimo(texto_integral="Novo texto integral do acordao."),
+        )
+    assert resp.status_code == 200
+    assert upd.call_args.kwargs["campos"]["texto_integral"] == "Novo texto integral do acordao."
+
+
 def test_delete_200_quando_existia(auth_como_admin):
     with (
         patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
