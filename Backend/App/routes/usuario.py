@@ -167,3 +167,20 @@ async def obter_sessao(
             "email": usuario["email"],
         },
     }
+
+
+@router.get("/usuarios/is_admin")
+async def usuario_is_admin(
+    usuario: dict[str, str] = Depends(get_authenticated_user),
+) -> dict:
+    """Retorna se o usuario autenticado eh admin (ADMIN_EMAILS do backend).
+
+    PR27 (finding #10): substitui a antiga estrategia de embed direto do
+    VITE_ADMIN_EMAILS no bundle JS do frontend. Backend continua sendo a
+    autoridade real (endpoints admin rejeitam 403); esta rota so serve pra
+    UI decidir renderizar ou nao o menu 'Jurisprudencia' e o FAB Quick-Add.
+    """
+    # Import tardio pra evitar ciclo (feedback.py -> models -> usuario.py)
+    from App.routes.feedback import _is_admin
+
+    return {"is_admin": _is_admin(usuario)}

@@ -19,10 +19,9 @@ export const JURISPRUDENCIA_LISTAR_URL = `${API_BASE_URL}/admin/jurisprudencia/l
 export function jurisprudenciaIdUrl(id) {
   return `${API_BASE_URL}/admin/jurisprudencia/${encodeURIComponent(id)}`;
 }
-export const ADMIN_EMAILS_FRONTEND = (import.meta.env.VITE_ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+// PR27 (finding #10): backend endpoint pra checar se usuario e admin.
+// Substitui ADMIN_EMAILS_FRONTEND (env var vazava lista no bundle JS).
+export const USER_IS_ADMIN_URL = `${API_BASE_URL}/usuarios/is_admin`;
 
 // PR5 (Guia Tecnico v3) — HiL e Observabilidade
 export function confirmarExtracaoUrl(contestacaoId) {

@@ -113,7 +113,21 @@ def main() -> int:
     args = parse_args()
 
     scraper_cls = SCRAPERS[args.tribunal]
-    scraper = scraper_cls(cookies_path=args.cookies) if args.cookies else scraper_cls()
+    # PR27 (finding #13): probe se o scraper aceita cookies_path. STJ aceita
+    # (PR26); tribunais futuros (TJ-PE, TST) podem nao aceitar. Verificacao
+    # dinamica em vez de TypeError silencioso.
+    import inspect
+    scraper_kwargs: dict = {}
+    if args.cookies:
+        sig = inspect.signature(scraper_cls.__init__)
+        if "cookies_path" in sig.parameters:
+            scraper_kwargs["cookies_path"] = args.cookies
+        else:
+            logger.warning(
+                "Scraper %s nao aceita --cookies (nao tem cookies_path no __init__). "
+                "Ignorando flag.", args.tribunal,
+            )
+    scraper = scraper_cls(**scraper_kwargs)
 
     inicio = time.time()
     logger.info(

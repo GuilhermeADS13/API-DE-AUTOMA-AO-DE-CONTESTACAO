@@ -1,7 +1,6 @@
 // Barra de navegacao principal com menu de paginas e estado de autenticacao.
 import React from "react";
 import { Badge, Button, Container, Nav, Navbar } from "react-bootstrap";
-import { ADMIN_EMAILS_FRONTEND } from "../config/api";
 
 /**
  * Gera iniciais para o avatar textual no menu superior.
@@ -18,22 +17,20 @@ function initialsFromName(name) {
 /**
  * Barra de navegacao principal com estado de autenticacao.
  *
- * PR22: menu "Jurisprudencia" aparece so se authUser.email estiver em
- * VITE_ADMIN_EMAILS. Backend (`_is_admin`) e a unica autoridade; frontend
- * so esconde por UX. Se atacante chamar /api/admin/jurisprudencia/criar
- * direto, recebe 403.
+ * PR22: menu "Jurisprudencia" aparece so pra admin.
+ * PR27 (finding #10): isAdmin vem do backend (`GET /api/usuarios/is_admin`)
+ * via prop do App.jsx. Backend continua sendo autoridade real; frontend
+ * so esconde UI. Substitui ADMIN_EMAILS_FRONTEND embutido no bundle JS.
  */
 export default function AppNavbar({
   currentPage,
   onNavigate,
   authUser,
+  isAdmin = false,
   onOpenLogin,
   onOpenSignup,
   onLogout,
 }) {
-  const emailAtual = (authUser?.email || "").toLowerCase();
-  const isAdmin = emailAtual && ADMIN_EMAILS_FRONTEND.includes(emailAtual);
-
   const menuItems = [
     { id: "inicio", label: "Início" },
     { id: "painel", label: "Formulário IA" },

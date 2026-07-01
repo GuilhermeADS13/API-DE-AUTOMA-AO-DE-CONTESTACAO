@@ -234,3 +234,25 @@ def test_obter_sessao_retorna_usuario_basico():
     assert result["status"] == "sucesso"
     assert result["usuario"]["id"] == "USR-001"
     assert "token" not in result["usuario"]
+
+
+def test_is_admin_true_quando_email_em_admin_emails(monkeypatch):
+    """PR27 (finding #10): endpoint retorna true pra usuario admin."""
+    monkeypatch.setenv("ADMIN_EMAILS", "admin@jurisflow.com,outro@jurisflow.com")
+    result = asyncio.run(
+        usuario.usuario_is_admin(
+            usuario={"id": "u1", "nome": "Admin", "email": "admin@jurisflow.com"}
+        )
+    )
+    assert result == {"is_admin": True}
+
+
+def test_is_admin_false_quando_email_fora(monkeypatch):
+    """Usuario logado mas nao-admin retorna false (nao 403)."""
+    monkeypatch.setenv("ADMIN_EMAILS", "admin@jurisflow.com")
+    result = asyncio.run(
+        usuario.usuario_is_admin(
+            usuario={"id": "u2", "nome": "Adv", "email": "adv@escritorio.com"}
+        )
+    )
+    assert result == {"is_admin": False}

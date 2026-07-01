@@ -238,11 +238,15 @@ def test_scraper_com_cookies_pula_visita_ao_home(tmp_path, monkeypatch):
     assert any(url == STJScraper.BASE_URL for url in urls_chamadas)
 
 
-def test_scraper_cookies_arquivo_inexistente_nao_crasha():
-    """Path invalido → cai no fluxo padrao sem excecao."""
+def test_scraper_cookies_arquivo_inexistente_nao_crasha(tmp_path):
+    """Path invalido → cai no fluxo padrao sem excecao.
+
+    PR27 (finding #14): usa tmp_path do pytest em vez de /tmp/ hardcoded
+    (que resolve pra C:/tmp em MSYS/Git Bash e pode existir em edge cases).
+    """
     from App.services.scrapers.stj import STJScraper
 
-    scraper = STJScraper(cookies_path="/tmp/nao-existe-12345.json")
+    scraper = STJScraper(cookies_path=tmp_path / "nao-existe-12345.json")
 
     # _cookies_obtidos permanece False (fluxo padrao)
     assert scraper._cookies_obtidos is False

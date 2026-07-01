@@ -1823,16 +1823,14 @@ def buscar_jurisprudencia_lexical(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _row_to_jurisprudencia_full(row: tuple, incluir_texto: bool = False) -> dict[str, Any]:
-    """Mapper completo (com id + criado_em) — usado nas rotas CRUD admin.
+def _row_to_jur_base(row: tuple) -> dict[str, Any]:
+    """Mapper das 14 primeiras colunas (comuns entre list e detail).
 
-    Diferente de `_row_to_jurisprudencia` (usado nas buscas), este preserva
-    o id da linha pra permitir update/delete e mostra metadados internos.
-
-    Se `incluir_texto=True`, retorna `texto_integral` extra na posicao [14].
-    Rota /listar mantem False (payload gigante); /{id} usa True.
+    PR27 (finding #9): dois mappers dedicados no lugar do antigo mapper
+    com flag boolean `incluir_texto` (que ja tinha causado bug de indice
+    row[14] vs row[15] no PR24 smoke).
     """
-    base = {
+    return {
         "id": int(row[0]),
         "tribunal": str(row[1] or ""),
         "tipo_decisao": str(row[2] or ""),
@@ -1848,26 +1846,43 @@ def _row_to_jurisprudencia_full(row: tuple, incluir_texto: bool = False) -> dict
         "scraped_at": _iso_or_str(row[12]),
         "tem_embedding": bool(row[13]),
     }
-    # row[14] eh sempre o boolean `(texto_integral IS NOT NULL) AS tem_texto_integral`
-    # (posicao final de _JURISPRUDENCIA_COLS_LIST).
-    base["tem_texto_integral"] = bool(row[14]) if len(row) > 14 else False
-    if incluir_texto:
-        # row[15] eh o texto_integral (colado ao _COLS_LIST na _COLS_FULL).
-        texto = row[15] if len(row) > 15 else None
-        base["texto_integral"] = str(texto) if texto else None
-    return base
 
 
-# Colunas base — sem texto_integral (payload leve pra rota /listar)
-_JURISPRUDENCIA_COLS_LIST = (
+def _row_to_jur_list(row: tuple) -> dict[str, Any]:
+    """Payload leve pra `/admin/jurisprudencia/listar`.
+
+    Formato de row: colunas de _JURISPRUDENCIA_COLS_LIST + `total_count`
+    da window function (posicao 15). O total_count e usado no listar mas
+    NAO entra no dict retornado pra API (ele fica no envelope da pagina).
+    """
+    d = _row_to_jur_base(row)
+    d["tem_texto_integral"] = bool(row[14])
+    return d
+
+
+def _row_to_jur_detail(row: tuple) -> dict[str, Any]:
+    """Payload completo pra `/admin/jurisprudencia/{id}` (inclui texto_integral).
+
+    Row de _JURISPRUDENCIA_COLS_DETAIL: 14 comuns + tem_texto_integral (14)
+    + texto_integral (15).
+    """
+    d = _row_to_jur_base(row)
+    d["tem_texto_integral"] = bool(row[14])
+    texto = row[15] if len(row) > 15 else None
+    d["texto_integral"] = str(texto) if texto else None
+    return d
+
+
+# Colunas comuns (14): usadas por listar E detail.
+_JURISPRUDENCIA_COLS_COMMON = (
     "id, tribunal, tipo_decisao, numero_processo, relator, data_julgamento, "
     "ementa, tese_firmada, area_juridica, peso_relevancia, fonte_url, "
     "criado_em, scraped_at, (embedding IS NOT NULL) AS tem_embedding, "
     "(texto_integral IS NOT NULL) AS tem_texto_integral"
 )
 
-# Colunas completas — inclui texto_integral (payload pesado, so pra GET /{id})
-_JURISPRUDENCIA_COLS_FULL = _JURISPRUDENCIA_COLS_LIST + ", texto_integral"
+# Detail = COMMON + texto_integral (payload pesado, so GET /{id})
+_JURISPRUDENCIA_COLS_DETAIL = _JURISPRUDENCIA_COLS_COMMON + ", texto_integral"
 
 
 def listar_jurisprudencia(
@@ -1910,19 +1925,15 @@ def listar_jurisprudencia(
 
     where_sql = " AND ".join(where_clauses)
 
+    # PR27 (finding #5): single query com window function em vez de count() +
+    # SELECT em transacoes separadas. count(*) OVER() calcula o total sobre o
+    # mesmo WHERE que ja esta sendo scaneado — 1 table scan em vez de 2.
+    # `total` vem em cada row (mesmo valor), extraimos da primeira.
     with _get_connection() as connection:
         with connection.cursor() as cursor:
-            # Total (sem limit/offset)
-            cursor.execute(
-                f"SELECT count(*) FROM jurisprudencia_externa WHERE {where_sql}",
-                params,
-            )
-            total = int(cursor.fetchone()[0])
-
-            # Pagina atual (payload leve — sem texto_integral)
             cursor.execute(
                 f"""
-                SELECT {_JURISPRUDENCIA_COLS_LIST}
+                SELECT {_JURISPRUDENCIA_COLS_COMMON}, count(*) OVER() AS total_count
                 FROM jurisprudencia_externa
                 WHERE {where_sql}
                 ORDER BY peso_relevancia DESC, data_julgamento DESC NULLS LAST, id DESC
@@ -1932,7 +1943,19 @@ def listar_jurisprudencia(
             )
             rows = cursor.fetchall()
 
-    items = [_row_to_jurisprudencia_full(r, incluir_texto=False) for r in rows]
+    if rows:
+        total = int(rows[0][15])  # count(*) OVER() na ultima coluna
+    else:
+        # Sem rows na pagina — rodar count separado so agora (edge case)
+        with _get_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"SELECT count(*) FROM jurisprudencia_externa WHERE {where_sql}",
+                    params,
+                )
+                total = int(cursor.fetchone()[0])
+
+    items = [_row_to_jur_list(r) for r in rows]
     return {
         "items": items,
         "total": total,
@@ -1949,14 +1972,14 @@ def obter_jurisprudencia(jurisprudencia_id: int) -> dict[str, Any] | None:
         with connection.cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT {_JURISPRUDENCIA_COLS_FULL}
+                SELECT {_JURISPRUDENCIA_COLS_DETAIL}
                 FROM jurisprudencia_externa
                 WHERE id = %s
                 """,
                 (int(jurisprudencia_id),),
             )
             row = cursor.fetchone()
-    return _row_to_jurisprudencia_full(row, incluir_texto=True) if row else None
+    return _row_to_jur_detail(row) if row else None
 
 
 _JURISPRUDENCIA_UPDATABLE = {
@@ -2004,11 +2027,14 @@ def atualizar_jurisprudencia(
         return False
 
     params.append(int(jurisprudencia_id))
-    sql = f"UPDATE jurisprudencia_externa SET {', '.join(sets)} WHERE id = %s"
+    # PR27 (finding #6): usar RETURNING id pra saber se a linha existia sem
+    # precisar de SELECT previo no caller. Elimina 1 round-trip + TOCTOU race
+    # (obter_jurisprudencia -> atualizar_jurisprudencia).
+    sql = f"UPDATE jurisprudencia_externa SET {', '.join(sets)} WHERE id = %s RETURNING id"
     with _get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(sql, params)
-            atualizou = cursor.rowcount > 0
+            atualizou = cursor.fetchone() is not None
         connection.commit()
     return atualizou
 

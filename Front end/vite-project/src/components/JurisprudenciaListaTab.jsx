@@ -48,6 +48,17 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
     area_juridica: "",
     busca: "",
   });
+  // PR27 (finding #4): busca separada com debounce 300ms. Antes: cada
+  // keystroke em `filtros.busca` disparava fetch. Agora: `buscaInput` reflete
+  // o input imediatamente, `filtros.busca` so muda apos 300ms de idle.
+  const [buscaInput, setBuscaInput] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFiltros((f) => (f.busca === buscaInput ? f : { ...f, busca: buscaInput }));
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [buscaInput]);
 
   const [editando, setEditando] = useState(null); // item completo do backend
   const [confirmandoDelete, setConfirmandoDelete] = useState(null);
@@ -106,11 +117,34 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
 
   const handleResetFiltros = () => {
     setFiltros({ tribunal: "", area_juridica: "", busca: "" });
+    setBuscaInput("");
     setPage(0);
   };
 
   const handleEdit = async (item) => {
-    // Busca completo (lista retorna o mesmo shape, mas garantir mais campos)
+    // PR27 (finding #1): fetch completo por id ANTES de abrir modal. O endpoint
+    // /listar retorna apenas 'tem_texto_integral: bool' (payload leve). Sem
+    // este fetch, edit modal abriria com texto_integral vazio e um PATCH
+    // apagaria o campo silenciosamente. Agora, se GET /{id} falhar,
+    // caimos no item da lista com warning — melhor abrir edit incompleto
+    // que quebrar o fluxo.
+    try {
+      const token = await getAccessToken();
+      const resp = await fetch(jurisprudenciaIdUrl(item.id), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        const completo = await resp.json();
+        setEditando(completo);
+        return;
+      }
+      console.warn(
+        `Falha ao buscar detalhe id=${item.id} (HTTP ${resp.status}); ` +
+        `abrindo com dados parciais da lista.`,
+      );
+    } catch (err) {
+      console.warn(`Erro de rede ao buscar detalhe id=${item.id}:`, err);
+    }
     setEditando(item);
   };
 
@@ -199,8 +233,8 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               size="sm"
               type="text"
               placeholder="ex: intervalo, Sum. 437, Min. Delgado..."
-              value={filtros.busca}
-              onChange={(e) => setFiltros((f) => ({ ...f, busca: e.target.value }))}
+              value={buscaInput}
+              onChange={(e) => setBuscaInput(e.target.value)}
             />
           </Col>
           <Col md={2} className="d-flex gap-1">

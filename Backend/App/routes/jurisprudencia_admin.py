@@ -25,16 +25,28 @@ from App.security import get_authenticated_user
 from App.services.embedding_service import gerar_embedding
 
 logger = logging.getLogger(__name__)
+# PR27 (finding #8): dependencies aplicadas no router — cada endpoint recebe
+# `usuario` ja validado via `exige_admin_dep`. Elimina risco de esquecer o
+# guard manual em rota nova.
 router = APIRouter()
 
 
-def _exige_admin(usuario: dict) -> None:
-    """Raise 403 quando usuario nao esta em ADMIN_EMAILS / nao eh backend_admin_token."""
+def exige_admin_dep(
+    usuario: dict[str, str] = Depends(get_authenticated_user),
+) -> dict[str, str]:
+    """FastAPI dependency: valida admin e retorna o usuario autenticado.
+
+    PR27 (finding #8): substitui a antiga funcao `_exige_admin` que era
+    chamada manualmente no topo de cada rota. Agora aplicada uma vez no
+    APIRouter (dependencies=[Depends(exige_admin_dep)]) — evita risco de
+    esquecer o guard num endpoint novo.
+    """
     if not _is_admin(usuario):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acesso restrito a administradores (ADMIN_EMAILS).",
         )
+    return usuario
 
 
 @router.post("/admin/jurisprudencia/criar", status_code=status.HTTP_201_CREATED)
@@ -42,7 +54,7 @@ def _exige_admin(usuario: dict) -> None:
 async def criar_jurisprudencia(
     request: Request,
     payload: JurisprudenciaManual,
-    usuario: dict[str, str] = Depends(get_authenticated_user),
+    usuario: dict[str, str] = Depends(exige_admin_dep),
 ) -> dict:
     """Cadastra ou atualiza acordao paradigma em public.jurisprudencia_externa.
 
@@ -59,8 +71,6 @@ async def criar_jurisprudencia(
     Falha de embedding NAO bloqueia o upsert (busca lexical continua
     funcionando mesmo sem vetor) — so loga warning.
     """
-    _exige_admin(usuario)
-
     # Import tardio: upsert_jurisprudencia toca o pool de conexoes do DB
     # so quando a rota e exercida. Evita inicializar pool no boot dos testes
     # que mockam tudo.
@@ -138,10 +148,9 @@ async def listar(
         default=None, max_length=200,
         description="ILIKE em numero_processo OU ementa OU relator",
     ),
-    usuario: dict[str, str] = Depends(get_authenticated_user),
+    usuario: dict[str, str] = Depends(exige_admin_dep),
 ) -> dict:
     """Lista paginada de jurisprudencia (admin)."""
-    _exige_admin(usuario)
     from App.database import listar_jurisprudencia
 
     try:
@@ -162,10 +171,9 @@ async def listar(
 async def obter(
     request: Request,
     jurisprudencia_id: int,
-    usuario: dict[str, str] = Depends(get_authenticated_user),
+    usuario: dict[str, str] = Depends(exige_admin_dep),
 ) -> dict:
     """Retorna 1 jurisprudencia por id, ou 404."""
-    _exige_admin(usuario)
     from App.database import obter_jurisprudencia
 
     item = obter_jurisprudencia(jurisprudencia_id)
@@ -183,18 +191,18 @@ async def atualizar(
     request: Request,
     jurisprudencia_id: int,
     payload: JurisprudenciaManual,
-    usuario: dict[str, str] = Depends(get_authenticated_user),
+    usuario: dict[str, str] = Depends(exige_admin_dep),
 ) -> dict:
-    """Atualiza uma jurisprudencia. Payload completo (Pydantic) — recalcula embedding."""
-    _exige_admin(usuario)
-    from App.database import atualizar_jurisprudencia, obter_jurisprudencia
+    """Atualiza uma jurisprudencia. Payload completo (Pydantic) — recalcula embedding.
 
-    # Verifica existencia antes de gerar embedding (evita custo desnecessario)
-    if not obter_jurisprudencia(jurisprudencia_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Jurisprudencia id={jurisprudencia_id} nao encontrada.",
-        )
+    PR27 (finding #6): elimina o `obter_jurisprudencia` previo. Antes: SELECT
+    + gerar_embedding + UPDATE = 2 round-trips DB + custo de embedding
+    mesmo quando registro nao existia. Agora: gera embedding + UPDATE com
+    RETURNING id (atualizar_jurisprudencia retorna False se linha nao existe).
+    Trade-off: embedding e gerado antes de saber se 404 — aceitavel porque
+    embedding local custa ~50ms; DB round-trip poupado vale mais.
+    """
+    from App.database import atualizar_jurisprudencia
 
     texto_pra_embed = " ".join(filter(None, [
         payload.numero_processo,
@@ -231,10 +239,9 @@ async def atualizar(
         ) from err
 
     if not atualizou:
-        # Race: existia no obter mas sumiu antes do update. Trata como 404.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Jurisprudencia id={jurisprudencia_id} nao encontrada (race).",
+            detail=f"Jurisprudencia id={jurisprudencia_id} nao encontrada.",
         )
 
     logger.info(
@@ -262,10 +269,9 @@ async def atualizar(
 async def deletar(
     request: Request,
     jurisprudencia_id: int,
-    usuario: dict[str, str] = Depends(get_authenticated_user),
+    usuario: dict[str, str] = Depends(exige_admin_dep),
 ) -> dict:
     """Remove jurisprudencia por id. 404 se nao existia."""
-    _exige_admin(usuario)
     from App.database import deletar_jurisprudencia
 
     try:

@@ -10,8 +10,7 @@ import MainPanelSection from "./components/MainPanelSection";
 import DashboardSection from "./components/DashboardSection";
 import SupportSection from "./components/SupportSection";
 import JurisprudenciaAdminPage from "./components/JurisprudenciaAdminPage";
-import JurisprudenciaQuickAddFab from "./components/JurisprudenciaQuickAddFab";
-import { ADMIN_EMAILS_FRONTEND } from "./config/api";
+import { USER_IS_ADMIN_URL } from "./config/api";
 import AppFooter from "./components/AppFooter";
 import RevisaoHumanaModal from "./components/RevisaoHumanaModal";
 import {
@@ -230,6 +229,11 @@ export default function App() {
   const [lastCaseId, setLastCaseId] = useState(null);
   // `authUser`: perfil autenticado em memoria + storage local seguro (sem token).
   const [authUser, setAuthUser] = useState(readValidSession);
+  // PR27 (finding #10): isAdmin vem do backend (GET /api/usuarios/is_admin)
+  // em vez de VITE_ADMIN_EMAILS embutido no bundle. Backend continua sendo
+  // autoridade (endpoints admin rejeitam 403); este state so serve pra UI
+  // decidir renderizar o menu "Jurisprudencia" na Navbar.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({
     name: "",
@@ -980,6 +984,31 @@ export default function App() {
       return null;
     }
   }, []);
+
+  // PR27 (finding #10): consulta backend `/api/usuarios/is_admin` quando o
+  // usuario loga/desloga. Cacheia o resultado no state raiz pra Navbar usar.
+  useEffect(() => {
+    let cancelled = false;
+    if (!authUser) {
+      setIsAdmin(false);
+      return undefined;
+    }
+    (async () => {
+      try {
+        const token = await getSupabaseAccessToken();
+        if (!token) return;
+        const resp = await fetch(USER_IS_ADMIN_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!cancelled) setIsAdmin(Boolean(data.is_admin));
+      } catch {
+        // Silencioso — fluxo normal e nao-admin (state ja `false` por default)
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authUser, getSupabaseAccessToken]);
 
   const loadDashboardData = useCallback(
     async ({ silent = false } = {}) => {
@@ -2017,6 +2046,7 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         authUser={authUser}
+        isAdmin={isAdmin}
         onOpenLogin={openAuthModal}
         onOpenSignup={openAuthModal}
         onLogout={handleLogout}
@@ -2109,15 +2139,6 @@ export default function App() {
       {currentPage === "jurisprudencia" && (
         <JurisprudenciaAdminPage getAccessToken={getSupabaseAccessToken} />
       )}
-
-      <JurisprudenciaQuickAddFab
-        getAccessToken={getSupabaseAccessToken}
-        visible={Boolean(
-          authUser?.email
-          && ADMIN_EMAILS_FRONTEND.includes(String(authUser.email).toLowerCase())
-          && currentPage !== "jurisprudencia"
-        )}
-      />
 
       <AppFooter />
 

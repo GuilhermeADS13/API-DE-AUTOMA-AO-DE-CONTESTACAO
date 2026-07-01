@@ -62,7 +62,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from App.database import upsert_jurisprudencia  # noqa: E402
-from App.services.embedding_service import gerar_embedding  # noqa: E402
+from App.services.embedding_service import (  # noqa: E402
+    gerar_embedding,
+    gerar_embeddings_batch,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -133,6 +136,85 @@ def _destilar_ementa_via_haiku(
     return texto or None
 
 
+def _preparar_entrada(
+    entry: dict[str, Any],
+    *,
+    indice: int,
+    total: int,
+    api_key: str | None,
+) -> tuple[dict, str, str, int, str] | None:
+    """Valida + destila entrada. Retorna (entry, ementa, numero, peso, conteudo)
+    pronta pra embedding+upsert, ou None se skip.
+
+    Extraida do `_processar_entrada` (PR27 finding #7) pra permitir batch
+    encode. `main()` chama `_preparar_entrada` primeiro pra todas as entradas,
+    depois faz batch de embeddings, depois upsert.
+    """
+    tribunal = str(entry.get("tribunal") or "").strip()
+    numero = str(entry.get("numero_processo") or "").strip()
+    conteudo = str(entry.get("conteudo") or "").strip()
+    ementa = str(entry.get("ementa") or "").strip()
+
+    if not tribunal:
+        logger.warning("[%d/%d] SKIP — sem 'tribunal'", indice, total)
+        return None
+
+    if not numero:
+        numero = _extrair_cnj(conteudo) or _extrair_cnj(ementa) or ""
+    if not numero:
+        logger.warning(
+            "[%d/%d] SKIP — sem 'numero_processo' explicito e sem CNJ "
+            "detectavel (tribunal=%s)", indice, total, tribunal,
+        )
+        return None
+
+    if not ementa and conteudo:
+        if not api_key:
+            logger.warning(
+                "[%d/%d] SKIP — sem 'ementa' e ANTHROPIC_API_KEY nao setada "
+                "(tribunal=%s numero=%s)", indice, total, tribunal, numero,
+            )
+            return None
+        logger.info(
+            "[%d/%d] destilando ementa via Haiku (tribunal=%s numero=%s)",
+            indice, total, tribunal, numero,
+        )
+        ementa = _destilar_ementa_via_haiku(conteudo, api_key=api_key) or ""
+        if not ementa:
+            logger.warning(
+                "[%d/%d] SKIP — Haiku nao retornou ementa", indice, total,
+            )
+            return None
+
+    if not ementa:
+        logger.warning(
+            "[%d/%d] SKIP — sem 'ementa' nem 'conteudo' pra destilar",
+            indice, total,
+        )
+        return None
+
+    peso_raw = entry.get("peso_relevancia")
+    if peso_raw is None or peso_raw == "":
+        peso = 5
+    else:
+        try:
+            peso = int(peso_raw)
+        except (TypeError, ValueError):
+            logger.warning(
+                "[%d/%d] SKIP — peso_relevancia invalido %r (%s %s)",
+                indice, total, peso_raw, tribunal, numero,
+            )
+            return None
+    if peso < 1 or peso > 10:
+        logger.warning(
+            "[%d/%d] SKIP — peso_relevancia fora de 1-10: %d (%s %s)",
+            indice, total, peso, tribunal, numero,
+        )
+        return None
+
+    return (entry, ementa, numero, peso, conteudo)
+
+
 def _processar_entrada(
     entry: dict[str, Any],
     *,
@@ -141,7 +223,11 @@ def _processar_entrada(
     api_key: str | None,
     dry_run: bool,
 ) -> str:
-    """Processa 1 entrada. Retorna 'ok' | 'skip' | 'falha'."""
+    """Legacy shim pra testes existentes. Retorna 'ok' | 'skip' | 'falha'.
+
+    O `main()` agora usa `_preparar_entrada` + batch. Esta funcao mantem o
+    fluxo antigo (individual encode) pra nao quebrar `test_processar_entrada*`.
+    """
     tribunal = str(entry.get("tribunal") or "").strip()
     numero = str(entry.get("numero_processo") or "").strip()
     conteudo = str(entry.get("conteudo") or "").strip()
@@ -197,6 +283,28 @@ def _processar_entrada(
             indice, total, tribunal, numero,
         )
 
+    # PR27 (finding #12): validar peso_relevancia ANTES do upsert com mensagem
+    # especifica. Antes: int('alto') levantava ValueError capturado pelo
+    # `except Exception` mais abaixo, gerando log 'FALHA upsert' enganoso.
+    peso_raw = entry.get("peso_relevancia")
+    if peso_raw is None or peso_raw == "":
+        peso = 5
+    else:
+        try:
+            peso = int(peso_raw)
+        except (TypeError, ValueError):
+            logger.warning(
+                "[%d/%d] SKIP — peso_relevancia invalido %r (%s %s)",
+                indice, total, peso_raw, tribunal, numero,
+            )
+            return "skip"
+    if peso < 1 or peso > 10:
+        logger.warning(
+            "[%d/%d] SKIP — peso_relevancia fora de 1-10: %d (%s %s)",
+            indice, total, peso, tribunal, numero,
+        )
+        return "skip"
+
     if dry_run:
         logger.info(
             "[DRY %d/%d] %s | %s | ementa=%d chars | texto_integral=%d chars | emb=%s",
@@ -215,7 +323,7 @@ def _processar_entrada(
             data_julgamento=entry.get("data_julgamento"),
             tese_firmada=entry.get("tese_firmada"),
             area_juridica=entry.get("area_juridica"),
-            peso_relevancia=int(entry.get("peso_relevancia") or 5),
+            peso_relevancia=peso,
             fonte_url=entry.get("fonte_url"),
             embedding=embedding,
             texto_integral=conteudo or None,
@@ -275,22 +383,84 @@ def main() -> int:
     skips = 0
     falhas = 0
 
+    # PR27 (finding #7): batch encode. Pre-processa (skips + destilacao Haiku)
+    # de todas entradas primeiro pra coletar ementas prontas, gera embeddings
+    # em UMA chamada model.encode(list, batch_size=32), depois upsert com
+    # embedding correspondente. Escala 10x melhor pra >20 entradas.
+    # Fallback: entradas com falha na destilacao viram skip antes do batch.
+
+    # Pass 1: validar + destilar. Retorna lista de tuplas (entry, ementa,
+    # numero, peso, conteudo) prontas pra upsert, ou None se skip.
+    entries_prontos: list[tuple[dict, str, str, int, str] | None] = []
     for i, entry in enumerate(data, start=1):
         if not isinstance(entry, dict):
             logger.warning("[%d/%d] SKIP — entrada nao e dict", i, len(data))
             skips += 1
+            entries_prontos.append(None)
             continue
-        resultado = _processar_entrada(
-            entry, indice=i, total=len(data),
-            api_key=api_key, dry_run=args.dry_run,
+        preparado = _preparar_entrada(
+            entry, indice=i, total=len(data), api_key=api_key,
         )
-        if resultado == "ok":
-            tribunal = str(entry.get("tribunal") or "?")
-            por_tribunal[tribunal] = por_tribunal.get(tribunal, 0) + 1
-        elif resultado == "skip":
+        entries_prontos.append(preparado)
+        if preparado is None:
             skips += 1
-        else:
+
+    # Pass 2: batch encode das ementas validadas
+    textos_pra_embed = [
+        f"{tup[2]} {tup[1]}".strip() for tup in entries_prontos if tup is not None
+    ]
+    if textos_pra_embed:
+        logger.info("Gerando %d embeddings em batch...", len(textos_pra_embed))
+        embeddings_batch = gerar_embeddings_batch(textos_pra_embed)
+    else:
+        embeddings_batch = []
+    embeddings_iter = iter(embeddings_batch)
+
+    # Pass 3: upsert (ou dry-run) com embedding correspondente
+    for i, (entry, tup) in enumerate(zip(data, entries_prontos), start=1):
+        if tup is None:
+            continue  # ja contado em skips na Pass 1
+        _entry_ref, ementa, numero, peso, conteudo = tup
+        embedding = next(embeddings_iter, None)
+        if embedding is None:
+            logger.warning(
+                "[%d/%d] AVISO — sem embedding pra %s (batch falhou)",
+                i, len(data), numero,
+            )
+
+        tribunal = str(entry.get("tribunal") or "").strip()
+        if args.dry_run:
+            logger.info(
+                "[DRY %d/%d] %s | %s | ementa=%d chars | texto_integral=%d chars | emb=%s",
+                i, len(data), tribunal, numero, len(ementa),
+                len(conteudo), embedding is not None,
+            )
+            por_tribunal[tribunal] = por_tribunal.get(tribunal, 0) + 1
+            continue
+
+        try:
+            upsert_jurisprudencia(
+                tribunal=tribunal,
+                numero_processo=numero,
+                ementa=ementa,
+                tipo_decisao=str(entry.get("tipo_decisao") or "Acordao"),
+                relator=entry.get("relator"),
+                data_julgamento=entry.get("data_julgamento"),
+                tese_firmada=entry.get("tese_firmada"),
+                area_juridica=entry.get("area_juridica"),
+                peso_relevancia=peso,
+                fonte_url=entry.get("fonte_url"),
+                embedding=embedding,
+                texto_integral=conteudo or None,
+            )
+            por_tribunal[tribunal] = por_tribunal.get(tribunal, 0) + 1
+            logger.info("[%d/%d] OK %s %s", i, len(data), tribunal, numero)
+        except Exception as err:  # noqa: BLE001 — falha de um nao trava lote
             falhas += 1
+            logger.error(
+                "[%d/%d] FALHA upsert %s %s: %s",
+                i, len(data), tribunal, numero, err,
+            )
 
     duracao = time.time() - inicio
     logger.info(

@@ -141,6 +141,65 @@ def _gerar_local(texto: str) -> Optional[list[float]]:
         return None
 
 
+def gerar_embeddings_batch(textos: list[str]) -> list[Optional[list[float]]]:
+    """Gera embeddings em batch (PR27 finding #7).
+
+    So o provider local suporta batch nativo via sentence-transformers.encode()
+    aceitando lista. Providers cohere/openai caem no loop sequencial pra
+    manter compatibilidade — as APIs deles suportam batch mas nao usamos hoje.
+
+    Retorna lista com None nas posicoes onde falhar (mantem alinhamento com
+    entrada). Muito mais rapido pra >20 textos: 1 forward pass do modelo
+    em vez de N.
+    """
+    if not textos:
+        return []
+    provider = _provider()
+    if provider != "local":
+        return [gerar_embedding(t) for t in textos]
+
+    model = _carregar_modelo_local()
+    if model is None:
+        return [None] * len(textos)
+
+    # Sanitiza + trunca antes de chamar encode
+    textos_limpos = [(t or "").strip()[:_MAX_CHARS] for t in textos]
+    # Marca vazias pra devolver None sem gastar forward pass
+    mascara = [bool(t) for t in textos_limpos]
+    textos_efetivos = [t for t, ok in zip(textos_limpos, mascara) if ok]
+
+    if not textos_efetivos:
+        return [None] * len(textos)
+
+    try:
+        embs = model.encode(
+            textos_efetivos,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            batch_size=32,
+        )
+    except Exception as err:
+        logger.error("Erro ao gerar embeddings batch: %s", err)
+        return [None] * len(textos)
+
+    it = iter(embs.tolist())
+    resultado: list[Optional[list[float]]] = []
+    for ok in mascara:
+        if not ok:
+            resultado.append(None)
+            continue
+        vetor = [float(v) for v in next(it)]
+        if len(vetor) != EMBEDDING_DIM:
+            logger.warning(
+                "Batch: embedding com %d dims (esperado %d)",
+                len(vetor), EMBEDDING_DIM,
+            )
+            resultado.append(None)
+        else:
+            resultado.append(vetor)
+    return resultado
+
+
 # ── Cohere (legacy — 1024 dims, incompativel com schema atual) ────────────────
 
 

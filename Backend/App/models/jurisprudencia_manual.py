@@ -9,12 +9,25 @@ from __future__ import annotations
 
 import re
 from datetime import date as date_type
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 _DATE_ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+# PR27 (finding #2): validar area_juridica contra enum canonica no proprio
+# model. Antes, string arbitraria passava Pydantic e era silenciosamente
+# coercada pra NULL no upsert_jurisprudencia — admin nao sabia que a area
+# tinha sido descartada. Agora o 422 acontece antes de gravar.
+# Mantido em sync com Backend/App/database.py AREAS_JURIDICAS_CANONICAS.
+AreaJuridica = Literal[
+    "trabalhista",
+    "consumidor",
+    "bancario",
+    "previdenciario",
+    "civel",
+]
 
 
 class JurisprudenciaManual(BaseModel):
@@ -36,7 +49,7 @@ class JurisprudenciaManual(BaseModel):
     relator: Annotated[str | None, Field(default=None, max_length=200)] = None
     data_julgamento: Annotated[str | None, Field(default=None, max_length=10)] = None
     tese_firmada: Annotated[str | None, Field(default=None, max_length=5000)] = None
-    area_juridica: Annotated[str | None, Field(default=None, max_length=40)] = None
+    area_juridica: AreaJuridica | None = None
     peso_relevancia: Annotated[int, Field(default=5, ge=1, le=10)] = 5
     fonte_url: Annotated[str | None, Field(default=None, max_length=500)] = None
     # PR24: texto_integral opcional (so pra consulta humana / reranker futuro,
@@ -51,7 +64,7 @@ class JurisprudenciaManual(BaseModel):
             raise ValueError("Campo obrigatorio nao pode ser vazio apos strip.")
         return texto
 
-    @field_validator("relator", "tese_firmada", "area_juridica", "fonte_url", "texto_integral")
+    @field_validator("relator", "tese_firmada", "fonte_url", "texto_integral")
     @classmethod
     def _strip_opcional(cls, value: str | None) -> str | None:
         if value is None:

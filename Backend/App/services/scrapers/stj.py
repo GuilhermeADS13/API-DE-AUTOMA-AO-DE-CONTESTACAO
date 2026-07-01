@@ -161,29 +161,54 @@ class STJScraper:
             return
 
         aplicados = 0
+        pulados = 0
         for cookie in cookies:
             if not isinstance(cookie, dict):
+                pulados += 1
                 continue
             name = cookie.get("name")
             value = cookie.get("value")
             if not name or value is None:
+                pulados += 1
+                continue
+            # PR27 (finding #15): sanitiza name/value contra header injection.
+            # \r\n\x00 em cookie value poderiam gerar headers HTTP malformados
+            # se a lib de sessao nao escapar (comportamento varia por versao
+            # do requests/curl_cffi). Reject explicito e mais seguro.
+            value_str = str(value)
+            if any(c in value_str for c in ("\r", "\n", "\x00")):
+                logger.warning(
+                    "Cookie %r com caracteres de controle no value — pulado",
+                    name,
+                )
+                pulados += 1
                 continue
             try:
                 self.session.cookies.set(
                     name=name,
-                    value=str(value),
+                    value=value_str,
                     domain=cookie.get("domain") or ".stj.jus.br",
                     path=cookie.get("path") or "/",
                 )
                 aplicados += 1
             except Exception as err:  # noqa: BLE001 — jar apis variam
                 logger.debug("skip cookie %s: %s", name, err)
+                pulados += 1
 
         if aplicados > 0:
             self._cookies_obtidos = True
             logger.info(
                 "STJ cookies pre-autenticados carregados de %s (%d cookies) — "
                 "pulando visita a HOME_URL", path, aplicados,
+            )
+        else:
+            # PR27 (finding #3): dev configurou --cookies mas TODOS pularam.
+            # Antes: log so em DEBUG, dev nao percebia. Agora WARNING audivel.
+            logger.warning(
+                "STJ cookies file lido de %s mas 0 cookies aplicados "
+                "(%d pulados) — scraper caira no fluxo Turnstile padrao. "
+                "Verifique estrutura do JSON: cada entrada precisa de "
+                "'name' e 'value' nao-vazios.", path, pulados,
             )
 
     def buscar(self, query: str, *, max_resultados: int = 20) -> list[dict[str, Any]]:
