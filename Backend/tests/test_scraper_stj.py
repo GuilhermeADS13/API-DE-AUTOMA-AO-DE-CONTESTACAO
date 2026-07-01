@@ -172,6 +172,107 @@ def test_garantir_cookies_sessao_visita_home_antes_da_busca(monkeypatch):
     assert urls_chamadas[1] == STJScraper.BASE_URL
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PR26 — cookies pre-autenticados (workflow anti-Turnstile)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_scraper_carrega_cookies_do_json(tmp_path, monkeypatch):
+    """Cookies exportados por exportar_cookies_stj.py sao aplicados na sessao."""
+    import json as _json
+    from App.services.scrapers.stj import STJScraper
+
+    cookies_file = tmp_path / "stj_cookies.json"
+    cookies_file.write_text(
+        _json.dumps([
+            {"name": "JSESSIONID", "value": "ABC123",
+             "domain": ".stj.jus.br", "path": "/"},
+            {"name": "cf_clearance", "value": "TURNSTILE_TOKEN_XYZ",
+             "domain": ".stj.jus.br", "path": "/"},
+        ]),
+        encoding="utf-8",
+    )
+
+    scraper = STJScraper(cookies_path=cookies_file)
+
+    # Deve ter marcado _cookies_obtidos=True pra pular visita a HOME
+    assert scraper._cookies_obtidos is True
+    # Cookies aplicados na session
+    cookie_names = {c.name for c in scraper.session.cookies}
+    assert "JSESSIONID" in cookie_names
+    assert "cf_clearance" in cookie_names
+
+
+def test_scraper_com_cookies_pula_visita_ao_home(tmp_path, monkeypatch):
+    """Pre-autenticado: fetch nao chama HOME_URL, so BASE_URL."""
+    import json as _json
+    from App.services.scrapers.stj import STJScraper
+
+    cookies_file = tmp_path / "stj_cookies.json"
+    cookies_file.write_text(
+        _json.dumps([{"name": "session", "value": "X", "domain": ".stj.jus.br"}]),
+        encoding="utf-8",
+    )
+    scraper = STJScraper(cookies_path=cookies_file)
+
+    urls_chamadas = []
+
+    class _FakeResp:
+        def __init__(self, text=""):
+            self.text = text
+        def raise_for_status(self):
+            pass
+
+    def fake_get(url, *args, **kwargs):
+        urls_chamadas.append(url)
+        return _FakeResp(text="<html></html>")
+
+    monkeypatch.setattr(scraper.session, "get", fake_get)
+    monkeypatch.setattr("App.services.scrapers.stj.time.sleep", lambda s: None)
+
+    scraper._fetch_pagina("query teste")
+
+    # Com cookies pre-autenticados NAO deve visitar HOME_URL
+    assert STJScraper.HOME_URL not in urls_chamadas
+    # BASE_URL sim (pesquisa)
+    assert any(url == STJScraper.BASE_URL for url in urls_chamadas)
+
+
+def test_scraper_cookies_arquivo_inexistente_nao_crasha():
+    """Path invalido → cai no fluxo padrao sem excecao."""
+    from App.services.scrapers.stj import STJScraper
+
+    scraper = STJScraper(cookies_path="/tmp/nao-existe-12345.json")
+
+    # _cookies_obtidos permanece False (fluxo padrao)
+    assert scraper._cookies_obtidos is False
+    # session tem 0 cookies do arquivo
+    assert len(list(scraper.session.cookies)) == 0
+
+
+def test_scraper_cookies_json_invalido_nao_crasha(tmp_path):
+    """JSON malformado no arquivo → warning + fluxo padrao."""
+    from App.services.scrapers.stj import STJScraper
+
+    cookies_file = tmp_path / "bad.json"
+    cookies_file.write_text("{isso nao e json", encoding="utf-8")
+
+    scraper = STJScraper(cookies_path=cookies_file)
+    assert scraper._cookies_obtidos is False
+
+
+def test_scraper_cookies_lista_vazia_nao_marca_pre_autenticado(tmp_path):
+    """Arquivo com lista vazia → nao marca _cookies_obtidos=True."""
+    import json as _json
+    from App.services.scrapers.stj import STJScraper
+
+    cookies_file = tmp_path / "empty.json"
+    cookies_file.write_text(_json.dumps([]), encoding="utf-8")
+
+    scraper = STJScraper(cookies_path=cookies_file)
+    assert scraper._cookies_obtidos is False
+
+
 def test_buscar_com_captcha_retorna_lista_vazia(monkeypatch):
     """Quando portal retorna HTML com CAPTCHA, scraper aborta gracefully."""
     from App.services.scrapers.stj import STJScraper

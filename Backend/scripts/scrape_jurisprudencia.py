@@ -101,6 +101,11 @@ def parse_args() -> argparse.Namespace:
         "--dry-run", action="store_true",
         help="Nao grava no banco, so mostra o que seria salvo.",
     )
+    parser.add_argument(
+        "--cookies", default=None,
+        help="Path pra JSON de cookies pre-autenticados (workflow anti-Cloudflare "
+        "Turnstile). Exportar via `scripts/exportar_cookies_stj.py`.",
+    )
     return parser.parse_args()
 
 
@@ -108,7 +113,7 @@ def main() -> int:
     args = parse_args()
 
     scraper_cls = SCRAPERS[args.tribunal]
-    scraper = scraper_cls()
+    scraper = scraper_cls(cookies_path=args.cookies) if args.cookies else scraper_cls()
 
     inicio = time.time()
     logger.info(

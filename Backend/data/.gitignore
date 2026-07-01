@@ -1,0 +1,4 @@
+# PR26: cookies pre-autenticados do STJ contem token de sessao — NUNCA commitar
+stj_cookies.json
+tjpe_cookies.json
+*_cookies.json

@@ -49,10 +49,12 @@ Outras limitacoes:
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 # curl_cffi mimica TLS fingerprint (JA3) do Chrome real — fast-path quando
@@ -100,7 +102,7 @@ class STJScraper:
     PESO_DEFAULT_REPETITIVO = 8
     PESO_DEFAULT_ACORDAO = 5
 
-    def __init__(self) -> None:
+    def __init__(self, cookies_path: Path | str | None = None) -> None:
         # Prefere curl_cffi (impersonate Chrome) pra burlar WAF. Fallback
         # pra requests so quando curl_cffi nao esta disponivel (testes
         # unitarios podem mockar a sessao via monkeypatch).
@@ -123,6 +125,66 @@ class STJScraper:
         })
         self._last_request_ts: float = 0.0
         self._cookies_obtidos: bool = False
+        # PR26: carrega cookies pre-autenticados (dev resolveu Turnstile
+        # manualmente via scripts/exportar_cookies_stj.py). Se cookies foram
+        # carregados com sucesso, marca `_cookies_obtidos=True` pra pular a
+        # visita a HOME_URL (que dispararia novo Turnstile em datacenter).
+        if cookies_path is not None:
+            self._carregar_cookies_de_arquivo(Path(cookies_path))
+
+    def _carregar_cookies_de_arquivo(self, path: Path) -> None:
+        """Carrega cookies exportados por `scripts/exportar_cookies_stj.py`.
+
+        Formato esperado: lista de dicts como Playwright retorna em
+        `context.cookies()`: {name, value, domain, path, expires, ...}.
+
+        Falha silenciosa se arquivo nao existe / JSON invalido — scraper
+        cai no fluxo padrao (curl_cffi + Playwright fallback). Loga
+        warning pra o dev saber.
+        """
+        if not path.exists():
+            logger.warning(
+                "STJ cookies file nao encontrado: %s — usando fluxo padrao", path
+            )
+            return
+        try:
+            cookies = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as err:
+            logger.warning("Falha ao ler cookies STJ (%s): %s", path, err)
+            return
+
+        if not isinstance(cookies, list):
+            logger.warning(
+                "Cookies STJ mal formatados em %s (esperava lista, recebi %s)",
+                path, type(cookies),
+            )
+            return
+
+        aplicados = 0
+        for cookie in cookies:
+            if not isinstance(cookie, dict):
+                continue
+            name = cookie.get("name")
+            value = cookie.get("value")
+            if not name or value is None:
+                continue
+            try:
+                self.session.cookies.set(
+                    name=name,
+                    value=str(value),
+                    domain=cookie.get("domain") or ".stj.jus.br",
+                    path=cookie.get("path") or "/",
+                )
+                aplicados += 1
+            except Exception as err:  # noqa: BLE001 — jar apis variam
+                logger.debug("skip cookie %s: %s", name, err)
+
+        if aplicados > 0:
+            self._cookies_obtidos = True
+            logger.info(
+                "STJ cookies pre-autenticados carregados de %s (%d cookies) — "
+                "pulando visita a HOME_URL", path, aplicados,
+            )
 
     def buscar(self, query: str, *, max_resultados: int = 20) -> list[dict[str, Any]]:
         """Pesquisa por `query` no portal e retorna lista de acordaos.
