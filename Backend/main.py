@@ -50,6 +50,7 @@ from slowapi.errors import RateLimitExceeded  # noqa: E402
 from App.database import init_db, ping_database  # noqa: E402
 from App.limiter import limiter  # noqa: E402
 from App.routes import (  # noqa: E402
+    captcha,
     contestacao,
     contestacao_peticao,
     datajud,
@@ -134,6 +135,7 @@ app.include_router(
     jurisprudencia_admin.router, prefix="/api", tags=["Jurisprudencia Admin"]
 )
 app.include_router(datajud.router, prefix="/api", tags=["DataJud"])
+app.include_router(captcha.router, prefix="/api", tags=["Captcha"])
 
 
 @app.get("/")
