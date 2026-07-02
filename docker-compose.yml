@@ -86,6 +86,10 @@ services:
       - BACKEND_ADMIN_TOKEN=${BACKEND_ADMIN_TOKEN}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
 
+      # PR28 — notificacao humana pra CAPTCHA (Telegram push no celular)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+
     volumes:
       # Cache dos pesos do modelo HuggingFace (~120MB) entre rebuilds.
       - hf_cache:/app/hf_cache
