@@ -20,8 +20,8 @@ from __future__ import annotations
 import logging
 import os
 import smtplib
+from dataclasses import dataclass
 from email.message import EmailMessage
-from pathlib import Path
 from typing import Optional
 
 import requests
@@ -30,6 +30,20 @@ logger = logging.getLogger(__name__)
 
 _TELEGRAM_TIMEOUT_SEC = 10
 _SMTP_TIMEOUT_SEC = 15
+
+
+@dataclass
+class ResultadoNotificacao:
+    """Retorno de `notificar_humano` (PR29).
+
+    Antes era bool simples; agora carrega o telegram_message_id pra o
+    orchestrator correlacionar a resposta do humano (feature: responder
+    direto no Telegram via reply, sem abrir link).
+    """
+
+    enviado: bool
+    canal: Optional[str] = None  # "telegram" | "email" | None
+    telegram_message_id: Optional[int] = None
 
 
 def _base_url() -> str:
@@ -47,20 +61,26 @@ def _enviar_telegram(
     caption: str,
     image_bytes: bytes | None,
     answer_url: str,
-) -> bool:
+) -> Optional[int]:
     """Envia foto do CAPTCHA + caption via Telegram Bot API.
 
-    Retorna True se HTTP 200. Falha silenciosa em qualquer erro (chamador
-    tenta proximo canal).
+    Retorna o `message_id` da mensagem enviada (int) em sucesso, ou None
+    em falha. O message_id serve pra correlacionar a resposta do humano:
+    ele responde (reply) a essa mensagem no proprio Telegram, e o poller
+    casa `reply_to_message.message_id` com o token pendente.
+
+    A caption instrui o humano a RESPONDER a mensagem (nao so abrir o link).
     """
+    instrucao = (
+        f"{caption}\n\n"
+        f"➡️ RESPONDA esta mensagem com o texto do CAPTCHA "
+        f"(ou abra: {answer_url})"
+    )
     try:
         if image_bytes:
             resp = requests.post(
                 f"https://api.telegram.org/bot{token}/sendPhoto",
-                data={
-                    "chat_id": chat_id,
-                    "caption": f"{caption}\n\nResponder em: {answer_url}",
-                },
+                data={"chat_id": chat_id, "caption": instrucao},
                 files={"photo": ("captcha.png", image_bytes, "image/png")},
                 timeout=_TELEGRAM_TIMEOUT_SEC,
             )
@@ -68,20 +88,18 @@ def _enviar_telegram(
             # Sem imagem — Turnstile/reCAPTCHA nao tem sprite pra enviar
             resp = requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
-                data={
-                    "chat_id": chat_id,
-                    "text": f"{caption}\n\nResponder em: {answer_url}",
-                },
+                data={"chat_id": chat_id, "text": instrucao},
                 timeout=_TELEGRAM_TIMEOUT_SEC,
             )
         if resp.ok:
-            return True
+            data = resp.json()
+            return data.get("result", {}).get("message_id")
         logger.warning(
             "Telegram HTTP %d: %s", resp.status_code, resp.text[:200],
         )
     except requests.RequestException as err:
         logger.warning("Telegram falhou: %s", err)
-    return False
+    return None
 
 
 def _enviar_email(
@@ -154,7 +172,7 @@ def notificar_humano(
     tipo_captcha: str,
     tribunal: Optional[str] = None,
     image_bytes: Optional[bytes] = None,
-) -> bool:
+) -> ResultadoNotificacao:
     """Notifica humano por Telegram (se configurado) OU email SMTP.
 
     Args:
@@ -163,8 +181,11 @@ def notificar_humano(
         tribunal: sigla do tribunal (STJ/TJ-PE/...) quando aplicavel.
         image_bytes: PNG do CAPTCHA (visual) ou None (Turnstile invisivel).
 
-    Retorna True se pelo menos 1 canal enviou. False se nenhum configurado
-    OU todos falharam.
+    Retorna ResultadoNotificacao com:
+        enviado: True se pelo menos 1 canal enviou.
+        canal: 'telegram' | 'email' | None.
+        telegram_message_id: id da msg (pra correlacionar reply), so quando
+            canal='telegram'.
     """
     answer_url = f"{_base_url()}/captcha/responder/{token_pending}"
     caption = (
@@ -173,27 +194,33 @@ def notificar_humano(
         f"Tribunal: {tribunal or '?'}"
     )
 
-    # Telegram primeiro (push instantaneo)
+    # Telegram primeiro (push instantaneo + resposta inline via reply)
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
     if tg_token and tg_chat:
-        if _enviar_telegram(
+        msg_id = _enviar_telegram(
             token=tg_token, chat_id=tg_chat,
             caption=caption, image_bytes=image_bytes, answer_url=answer_url,
-        ):
-            logger.info("CAPTCHA pending %s notificado via Telegram", token_pending)
-            return True
+        )
+        if msg_id is not None:
+            logger.info(
+                "CAPTCHA pending %s notificado via Telegram (msg_id=%s)",
+                token_pending, msg_id,
+            )
+            return ResultadoNotificacao(
+                enviado=True, canal="telegram", telegram_message_id=msg_id,
+            )
         # Se Telegram configurado mas falhou, cai pra email
 
     if _enviar_email(
         caption=caption, image_bytes=image_bytes, answer_url=answer_url,
     ):
         logger.info("CAPTCHA pending %s notificado via email SMTP", token_pending)
-        return True
+        return ResultadoNotificacao(enviado=True, canal="email")
 
     logger.warning(
         "CAPTCHA pending %s SEM canal de notificacao configurado. "
         "Setar TELEGRAM_BOT_TOKEN+TELEGRAM_CHAT_ID ou SUPPORT_SMTP_*.",
         token_pending,
     )
-    return False
+    return ResultadoNotificacao(enviado=False)

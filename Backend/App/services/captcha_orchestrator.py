@@ -69,6 +69,11 @@ class _TarefaPending:
     ttl_sec: int
     respondido_em: Optional[float] = None
     resposta: Optional[str] = None
+    # PR29: chave de deduplicacao (ex: tribunal + hash da query). Se scraper
+    # retentar o mesmo CAPTCHA, reusa a task existente em vez de flood.
+    dedup_key: Optional[str] = None
+    # PR29: message_id do Telegram pra correlacionar reply do humano.
+    telegram_message_id: Optional[int] = None
     # Event pra `aguardar_resposta()` acordar assim que /answer chegar.
     evento: threading.Event = field(default_factory=threading.Event)
 
@@ -78,6 +83,8 @@ class _TarefaPending:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _pendentes: dict[str, _TarefaPending] = {}
+# PR29: mapa telegram_message_id -> token (feature: responder via reply).
+_telegram_msg_para_token: dict[int, str] = {}
 _lock = threading.Lock()
 
 
@@ -89,12 +96,14 @@ def _gerar_token() -> str:
 def _limpar_expirados_locked() -> None:
     """Remove tarefas com TTL vencido. Deve ser chamado com _lock adquirido."""
     agora = time.time()
-    expirados: list[tuple[str, int]] = []
+    expirados: list[tuple[str, int, Optional[int]]] = []
     for token, tarefa in _pendentes.items():
         if agora - tarefa.criado_em > tarefa.ttl_sec and tarefa.respondido_em is None:
-            expirados.append((token, tarefa.ttl_sec))
-    for token, ttl in expirados:
+            expirados.append((token, tarefa.ttl_sec, tarefa.telegram_message_id))
+    for token, ttl, tg_msg in expirados:
         _pendentes.pop(token, None)
+        if tg_msg is not None:
+            _telegram_msg_para_token.pop(tg_msg, None)
         logger.info("Task CAPTCHA %s expirou apos %ds sem resposta", token, ttl)
 
 
@@ -126,12 +135,26 @@ def _tentar_crnn(image_bytes: bytes) -> Optional[str]:
         return None
 
 
+def _buscar_pending_por_dedup_locked(dedup_key: str) -> Optional[_TarefaPending]:
+    """Retorna task nao-respondida + nao-expirada com mesma dedup_key. _lock adquirido."""
+    agora = time.time()
+    for tarefa in _pendentes.values():
+        if (
+            tarefa.dedup_key == dedup_key
+            and tarefa.respondido_em is None
+            and agora - tarefa.criado_em <= tarefa.ttl_sec
+        ):
+            return tarefa
+    return None
+
+
 def resolver(
     image_bytes: Optional[bytes],
     *,
     tipo: TipoCaptcha,
     tribunal: Optional[str] = None,
     ttl_sec: int = _TTL_SEC_DEFAULT,
+    dedup_key: Optional[str] = None,
 ) -> ResultadoCaptcha:
     """Executa cascade: CRNN → notify humano.
 
@@ -143,6 +166,10 @@ def resolver(
         tipo: classificacao da protecao.
         tribunal: sigla pro contexto na notificacao.
         ttl_sec: quanto tempo esperar humano responder antes de expirar.
+        dedup_key: PR29 anti-flood. Se o scraper retentar o mesmo CAPTCHA
+            (ex: mesma query no mesmo tribunal), passe a mesma chave. Se ja
+            existir task pending com essa chave, reusa em vez de notificar
+            de novo (evita spam de pings no Telegram).
 
     Retorna ResultadoCaptcha com status:
         - 'ok': CRNN resolveu, resposta em `.texto`
@@ -158,30 +185,80 @@ def resolver(
 
     # Estagio 2: (cookies session NAO passa por aqui — feito antes no scraper)
 
+    # PR29 dedup: se ja tem task pending com mesma dedup_key, reusa (nao floodar)
+    if dedup_key:
+        with _lock:
+            _limpar_expirados_locked()
+            existente = _buscar_pending_por_dedup_locked(dedup_key)
+            if existente is not None:
+                logger.info(
+                    "CAPTCHA dedup: reusando task %s (dedup_key=%s) — sem novo ping",
+                    existente.token, dedup_key,
+                )
+                return ResultadoCaptcha(
+                    status="pending", token=existente.token,
+                    mensagem="Reusando notificacao pendente (dedup).",
+                )
+
     # Estagio 3: notify humano
     token = _gerar_token()
     tarefa = _TarefaPending(
         token=token, tipo=tipo, tribunal=tribunal,
-        criado_em=time.time(), ttl_sec=ttl_sec,
+        criado_em=time.time(), ttl_sec=ttl_sec, dedup_key=dedup_key,
     )
     with _lock:
         _pendentes[token] = tarefa
 
-    enviado = notificar_humano(
+    resultado_notif = notificar_humano(
         token_pending=token, tipo_captcha=tipo,
         tribunal=tribunal, image_bytes=image_bytes,
     )
-    if not enviado:
+    if not resultado_notif.enviado:
         with _lock:
             _pendentes.pop(token, None)
         return ResultadoCaptcha(
             status="sem_canal",
             mensagem="Nenhum canal de notificacao configurado (TELEGRAM_* ou SUPPORT_SMTP_*)."
         )
+
+    # Se foi via Telegram, guarda message_id pra correlacionar reply + liga poller
+    if resultado_notif.canal == "telegram" and resultado_notif.telegram_message_id:
+        with _lock:
+            tarefa.telegram_message_id = resultado_notif.telegram_message_id
+            _telegram_msg_para_token[resultado_notif.telegram_message_id] = token
+        _iniciar_poller_telegram()
+
     return ResultadoCaptcha(
         status="pending", token=token,
         mensagem=f"Humano notificado (tipo={tipo}, tribunal={tribunal or '?'}).",
     )
+
+
+def _iniciar_poller_telegram() -> None:
+    """Liga o poller do Telegram (import tardio pra evitar ciclo).
+
+    Idempotente: poller so inicia uma thread daemon se ainda nao estiver
+    rodando. Chamado sempre que uma task Telegram e criada.
+    """
+    try:
+        from App.services import captcha_telegram_poller
+        captcha_telegram_poller.iniciar_se_preciso()
+    except Exception as err:  # noqa: BLE001 — poller e best-effort
+        logger.warning("Nao consegui iniciar poller Telegram: %s", err)
+
+
+def token_por_telegram_msg(message_id: int) -> Optional[str]:
+    """Retorna o token da task cujo Telegram msg foi respondido (reply). PR29."""
+    with _lock:
+        return _telegram_msg_para_token.get(message_id)
+
+
+def tem_pendentes_nao_respondidos() -> bool:
+    """True se ha ao menos 1 task aguardando resposta. Poller usa pra decidir
+    se continua rodando ou dorme."""
+    with _lock:
+        _limpar_expirados_locked()
+        return any(p.respondido_em is None for p in _pendentes.values())
 
 
 def registrar_resposta(token: str, texto: str) -> bool:
@@ -198,6 +275,9 @@ def registrar_resposta(token: str, texto: str) -> bool:
         tarefa.resposta = texto.strip()
         tarefa.respondido_em = time.time()
         tarefa.evento.set()
+        # Limpa mapa Telegram (msg respondida nao precisa mais de correlacao)
+        if tarefa.telegram_message_id is not None:
+            _telegram_msg_para_token.pop(tarefa.telegram_message_id, None)
     logger.info("CAPTCHA %s respondido pelo humano", token)
     return True
 
