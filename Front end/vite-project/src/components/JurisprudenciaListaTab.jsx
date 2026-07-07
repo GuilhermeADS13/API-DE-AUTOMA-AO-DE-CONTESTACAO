@@ -272,84 +272,92 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
       {erro && <Alert variant="danger">{erro}</Alert>}
 
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <small className="text-muted">
-          {loading ? "Carregando..." : `${total} resultado(s) — pagina ${page + 1} de ${totalPages}`}
-        </small>
+        <span className="jur-resultbar">
+          {loading
+            ? "Carregando..."
+            : `${total} resultado${total === 1 ? "" : "s"} · página ${page + 1} de ${totalPages}`}
+        </span>
       </div>
 
       <div className="table-responsive">
         <Table striped hover size="sm">
           <thead>
             <tr>
-              <th style={{ width: 60 }}>Trib.</th>
-              <th style={{ width: 200 }}>Numero</th>
-              <th style={{ width: 100 }}>Tipo</th>
+              <th style={{ width: 64 }}>Trib.</th>
+              <th style={{ width: 190 }}>Número</th>
+              <th style={{ width: 110 }}>Tipo</th>
               <th>Ementa</th>
-              <th style={{ width: 80 }}>Peso</th>
-              <th style={{ width: 120 }}>Acoes</th>
+              <th style={{ width: 90 }}>Peso</th>
+              <th style={{ width: 100 }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading && items.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-3">
-                  <Spinner size="sm" animation="border" />
+                <td colSpan={6} className="jur-empty">
+                  <Spinner size="sm" animation="border" /> Carregando...
                 </td>
               </tr>
             )}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-3 text-muted">
-                  Nenhum resultado.
+                <td colSpan={6} className="jur-empty">
+                  Nenhum acórdão encontrado. Ajuste os filtros ou cadastre um
+                  novo na aba "Adicionar novo".
                 </td>
               </tr>
             )}
             {items.map((item) => (
               <tr key={item.id}>
-                <td><Badge bg="secondary">{item.tribunal}</Badge></td>
+                <td><span className="jur-trib">{item.tribunal}</span></td>
+                <td><span className="jur-num">{item.numero_processo}</span></td>
+                <td><span className="jur-tipo">{item.tipo_decisao}</span></td>
                 <td>
-                  <code style={{ fontSize: "0.85em" }}>
-                    {item.numero_processo}
-                  </code>
+                  <div className="jur-ementa" title={item.ementa}>
+                    {truncar(item.ementa, 220)}
+                  </div>
                 </td>
                 <td>
-                  <small className="text-muted">{item.tipo_decisao}</small>
-                </td>
-                <td style={{ fontSize: "0.85em" }}>{truncar(item.ementa)}</td>
-                <td>
-                  <Badge bg={item.peso_relevancia >= 8 ? "warning" : "light"}
-                    text={item.peso_relevancia >= 8 ? "dark" : "dark"}>
+                  <span
+                    className={`jur-peso ${
+                      item.peso_relevancia >= 9
+                        ? "jur-peso-alto"
+                        : item.peso_relevancia >= 6
+                          ? "jur-peso-medio"
+                          : "jur-peso-baixo"
+                    }`}
+                    title={`Relevância ${item.peso_relevancia}/10`}
+                  >
                     {item.peso_relevancia}
-                  </Badge>
-                  {!item.tem_embedding && (
-                    <Badge bg="danger" className="ms-1" title="Sem embedding">
-                      !
-                    </Badge>
-                  )}
+                  </span>
                   {item.tem_texto_integral && (
-                    <Badge bg="info" className="ms-1" title="Texto integral disponivel">
+                    <span className="jur-flag jur-flag-ti" title="Texto integral disponível">
                       TI
-                    </Badge>
+                    </span>
+                  )}
+                  {!item.tem_embedding && (
+                    <span className="jur-flag jur-flag-noemb" title="Sem embedding — busca semântica não retorna">
+                      !
+                    </span>
                   )}
                 </td>
                 <td>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
+                  <button
+                    type="button"
+                    className="jur-acao me-1"
                     onClick={() => handleEdit(item)}
                     title="Editar"
-                    className="me-1"
                   >
-                    <PencilSquare />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-danger"
+                    <PencilSquare size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="jur-acao jur-acao-del"
                     onClick={() => handleConfirmDelete(item)}
                     title="Excluir"
                   >
-                    <Trash />
-                  </Button>
+                    <Trash size={15} />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -382,6 +390,8 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
         onHide={() => setEditando(null)}
         size="lg"
         backdrop="static"
+        dialogClassName="jur-modal"
+        contentClassName="jur-admin"
       >
         <Modal.Header closeButton>
           <Modal.Title>
@@ -412,9 +422,11 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
         show={Boolean(confirmandoDelete)}
         onHide={() => setConfirmandoDelete(null)}
         centered
+        dialogClassName="jur-modal"
+        contentClassName="jur-admin"
       >
         <Modal.Header closeButton>
-          <Modal.Title>Confirmar exclusao</Modal.Title>
+          <Modal.Title>Confirmar exclusão</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <p>

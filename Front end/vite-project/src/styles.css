@@ -2302,11 +2302,33 @@ h5 {
 .auth-modal .modal-content,
 .platform-modal .modal-content,
 .baixar-formato-modal .modal-content,
-.progresso-modal .modal-content {
+.progresso-modal .modal-content,
+.jur-modal .modal-content {
   background: linear-gradient(180deg, rgba(23, 28, 36, 0.96), rgba(18, 22, 29, 0.94)) !important;
   border: 1px solid var(--uniform-border) !important;
   color: var(--uniform-text) !important;
   border-radius: 24px !important;
+}
+
+/* PR30 — modais do painel Jurisprudencia (editar + confirmar delete) */
+.jur-modal .modal-header,
+.jur-modal .modal-footer {
+  border-color: var(--uniform-border);
+}
+.jur-modal .modal-title {
+  color: var(--uniform-text);
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.jur-modal .modal-body {
+  color: var(--uniform-text);
+}
+.jur-modal .modal-body .text-muted {
+  color: var(--uniform-muted) !important;
+}
+.jur-modal .btn-close {
+  filter: invert(1) grayscale(1) brightness(1.4);
 }
 
 .hero-console {
@@ -2564,4 +2586,271 @@ h6,
 }
 .progresso-aviso .progresso-aviso-forte {
   color: #ff8a8a;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PR30 — Painel admin de Jurisprudencia (contraste + polish no tema Noir)
+   Corrige o texto apagado (Bootstrap text-muted era cinza escuro sobre
+   fundo escuro) usando os tokens do tema. Escopo em .jur-admin pra nao
+   vazar pro resto do app.
+   ───────────────────────────────────────────────────────────────────────── */
+.jur-admin {
+  color: var(--uniform-text);
+}
+/* Bootstrap text-muted eh cinza escuro (ilegivel no Noir) — sobrescreve */
+.jur-admin .text-muted {
+  color: var(--uniform-muted) !important;
+}
+.jur-admin h4,
+.jur-admin h5,
+.jur-admin h6,
+.jur-admin label,
+.jur-admin p,
+.jur-admin strong {
+  color: var(--uniform-text);
+}
+
+.jur-admin .jur-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+.jur-admin .jur-header h4 {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--uniform-text);
+}
+.jur-admin .jur-sub {
+  color: var(--uniform-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 1.1rem;
+  max-width: 62ch;
+}
+.jur-admin .jur-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--uniform-border);
+  color: var(--uniform-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Tabs — aba ativa em dourado */
+.jur-admin .nav-tabs {
+  border-bottom: 1px solid var(--uniform-border);
+}
+.jur-admin .nav-tabs .nav-link {
+  color: var(--uniform-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+}
+.jur-admin .nav-tabs .nav-link:hover {
+  color: var(--uniform-text);
+  border-bottom-color: var(--uniform-border);
+}
+.jur-admin .nav-tabs .nav-link.active {
+  color: var(--uniform-accent);
+  background: transparent;
+  border-bottom-color: var(--uniform-accent);
+}
+
+/* Filtros */
+.jur-admin .form-label {
+  color: var(--uniform-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+}
+.jur-admin .form-control,
+.jur-admin .form-select {
+  background: var(--uniform-surface);
+  border: 1px solid var(--uniform-border);
+  color: var(--uniform-text);
+}
+.jur-admin .form-control::placeholder {
+  color: rgba(196, 203, 216, 0.55);
+}
+.jur-admin .form-control:focus,
+.jur-admin .form-select:focus {
+  background: var(--uniform-surface);
+  color: var(--uniform-text);
+  border-color: var(--uniform-accent);
+  box-shadow: 0 0 0 0.18rem var(--ring);
+}
+
+/* Tabela */
+.jur-admin .table {
+  color: var(--uniform-text);
+  border-color: var(--uniform-border);
+  margin-bottom: 0;
+}
+.jur-admin .table > thead > tr > th {
+  color: var(--uniform-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--uniform-border);
+  background: var(--uniform-surface);
+  padding: 0.6rem 0.75rem;
+  white-space: nowrap;
+}
+.jur-admin .table > tbody > tr > td {
+  border-color: rgba(255, 255, 255, 0.06);
+  vertical-align: middle;
+  padding: 0.7rem 0.75rem;
+}
+/* Zebra + hover no dark (Bootstrap striped default fica branco demais) */
+.jur-admin .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--uniform-text);
+}
+.jur-admin .table-hover > tbody > tr:hover > td {
+  background: rgba(208, 178, 122, 0.09);
+  color: var(--uniform-text);
+}
+
+/* Numero do processo — mono em dourado (era vermelho do <code> default) */
+.jur-admin .jur-num {
+  font-family: "SFMono-Regular", "Consolas", monospace;
+  font-size: 0.82rem;
+  color: var(--uniform-accent);
+  background: rgba(208, 178, 122, 0.08);
+  border: 1px solid var(--uniform-border);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+.jur-admin .jur-tipo {
+  color: var(--uniform-muted);
+  font-size: 0.8rem;
+}
+/* Ementa — 2 linhas com reticencias, legivel */
+.jur-admin .jur-ementa {
+  color: var(--uniform-text);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Badge tribunal por cor */
+.jur-admin .jur-trib {
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--uniform-border);
+  background: var(--uniform-surface-alt);
+  color: var(--uniform-text);
+}
+
+/* Peso — escala de cor */
+.jur-admin .jur-peso {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+.jur-admin .jur-peso-alto {
+  background: linear-gradient(135deg, #d0b27a, #b8935f);
+  color: #1a1611;
+}
+.jur-admin .jur-peso-medio {
+  background: rgba(208, 178, 122, 0.18);
+  color: var(--uniform-accent);
+  border: 1px solid var(--uniform-border);
+}
+.jur-admin .jur-peso-baixo {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--uniform-muted);
+  border: 1px solid var(--uniform-border);
+}
+.jur-admin .jur-flag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12rem 0.32rem;
+  border-radius: 5px;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.jur-admin .jur-flag-ti {
+  background: rgba(110, 168, 254, 0.18);
+  color: #9ec5fe;
+  border: 1px solid rgba(110, 168, 254, 0.3);
+}
+.jur-admin .jur-flag-noemb {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f1959b;
+  border: 1px solid rgba(220, 53, 69, 0.35);
+}
+
+/* Acoes */
+.jur-admin .jur-acao {
+  border: 1px solid var(--uniform-border);
+  background: var(--uniform-surface);
+  color: var(--uniform-muted);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.jur-admin .jur-acao:hover {
+  color: var(--uniform-text);
+  border-color: var(--uniform-accent);
+  background: rgba(208, 178, 122, 0.12);
+}
+.jur-admin .jur-acao-del:hover {
+  color: #ff9ea5;
+  border-color: rgba(220, 53, 69, 0.5);
+  background: rgba(220, 53, 69, 0.12);
+}
+
+.jur-admin .jur-resultbar {
+  color: var(--uniform-muted);
+  font-size: 0.82rem;
+}
+.jur-admin .jur-empty {
+  color: var(--uniform-muted);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+/* Form de cadastro — labels + help legiveis */
+.jur-admin .form-text {
+  color: rgba(196, 203, 216, 0.72);
+}
+.jur-admin .pagination .page-link {
+  background: var(--uniform-surface);
+  border-color: var(--uniform-border);
+  color: var(--uniform-muted);
+}
+.jur-admin .pagination .active .page-link {
+  background: var(--uniform-accent);
+  border-color: var(--uniform-accent);
+  color: #1a1611;
 }
