@@ -128,12 +128,16 @@ services:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=${N8N_BLOCK_ENV_ACCESS_IN_NODE:-true}
 
       # ── IA – Claude (Anthropic) ──────────────────────────────────────────
+      # PR32: baseline atualizado pra familia Claude 5 (Sonnet 5) no gerador e
+      # extrator — salto de qualidade na minuta e na extracao. Verificacao fica
+      # em Haiku 4.5 (ultimo Haiku, tarefa leve). Pra maxima qualidade, setar
+      # CLAUDE_MODEL=claude-opus-5 no .env (custo maior, so o gerador).
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-6}
-      # Extracao usa Sonnet: peticoes longas/complexas (20+ paginas) exigem
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
+      # Extracao usa Sonnet 5: peticoes longas/complexas (20+ paginas) exigem
       # extracao precisa para nao cair em baixa confianca (revisao humana).
       # Verificacao de citacoes (tarefa simples) fica em Haiku (rapido/barato).
-      - CLAUDE_EXTRACAO_MODEL=${CLAUDE_EXTRACAO_MODEL:-claude-sonnet-4-6}
+      - CLAUDE_EXTRACAO_MODEL=${CLAUDE_EXTRACAO_MODEL:-claude-sonnet-5}
       - CLAUDE_VERIFICACAO_MODEL=${CLAUDE_VERIFICACAO_MODEL:-claude-haiku-4-5}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       - ANTHROPIC_VERSION=${ANTHROPIC_VERSION:-2023-06-01}
