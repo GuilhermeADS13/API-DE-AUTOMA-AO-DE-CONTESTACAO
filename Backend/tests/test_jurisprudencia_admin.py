@@ -323,9 +323,16 @@ def test_obter_200_quando_existe(auth_como_admin):
 
 
 def test_patch_404_quando_inexistente(auth_como_admin):
+    # PR31: a rota PATCH (desde PR27) NAO chama mais obter_jurisprudencia;
+    # confia no atualizar_jurisprudencia retornar False (UPDATE ... RETURNING).
+    # Mock correto: atualizar retorna False + embedding mockado (nao carrega modelo).
     with (
         patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
-        patch("App.database.obter_jurisprudencia", return_value=None),
+        patch(
+            "App.routes.jurisprudencia_admin.gerar_embedding",
+            return_value=[0.1] * 384,
+        ),
+        patch("App.database.atualizar_jurisprudencia", return_value=False),
     ):
         resp = client.patch(
             "/api/admin/jurisprudencia/9999", json=_payload_minimo(),

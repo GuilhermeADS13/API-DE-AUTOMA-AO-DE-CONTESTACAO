@@ -1,0 +1,202 @@
+{
+ "tempoGasto": 210,
+ "totalRegistros": 361779,
+ "registros": [
+  {
+   "registro": {
+    "txtEmentaHighlight": "<html>\n <head>\n  <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n        ",
+    "inteiroTeorHTMLHighlight": "<html>\n <head>\n  <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n        ",
+    "id": "40070277a39250baa63fdaf47dbc87bd",
+    "numero": "10016843020225020053",
+    "tipo": {
+     "codigoTipoJurisprudencia": "ACORDAO",
+     "nome": "Acordão"
+    },
+    "orgaoJudicante": {
+     "codigo": 16,
+     "descricao": "1ª Turma"
+    },
+    "orgao": {
+     "numero": 0,
+     "nome": "Tribunal Superior do Trabalho",
+     "sigla": "TST"
+    },
+    "numProcInt": 202855,
+    "anoProcInt": 0,
+    "numProc": 1001684,
+    "anoProc": 2022,
+    "codFase": "RRAg",
+    "indTipAcordao": "R",
+    "dtaJulgamento": "2026-05-27T09:00:00-03",
+    "numFormatado": "RRAg - 1001684-30.2022.5.02.0053",
+    "numInterno": 0,
+    "dtaPublicacao": "2026-07-22T16:58:40-03",
+    "dtaOrdenacao": "2026-07-22T16:58:40-03",
+    "dtaAtualizacao": "2026-07-25T09:21:05-03",
+    "codMinRelator": "GMARPJ",
+    "nomRelator": "amaury rodrigues pinto junior",
+    "sexRelator": "M",
+    "ementaHtml": "removido no backend",
+    "ementa": "DIREITO DO TRABALHO. AGRAVO DE INSTRUMENTO DA RÉ. ADICIONAL NOTURNO. TRANSCRIÇÃO SOMENTE DA PARTE DISPOSITIVA DO ACÓRDÃO RECORRIDO E EM TÓPICO APARTADO. INOBSERVÂNCIA DO PRESSUPOSTO FIXADO NO ART. 896, § 1º-A, III, DA CLT. TRANSCENDÊNCIA PREJUDICADA. 1. Em relação ao tema \" DO ADICIONAL NOTURNO \", das razões do recurso de revista, verifica-se que a recorrente, ora agravante, não transcreveu o trecho do acórdão regional que enfrentou a matéria. 2. Nesse contexto, cumpre ressaltar que a mera transcrição da parte dispositiva do acórdão recorrido, providência inócua ao atendimento do ônus de indicação do trecho específico que evidencia o prequestionamento da matéria objeto do recurso de revista, sobretudo quando realizada em tópico apartado, fl. 9, e dissociada das razões recursais, não se presta a atender o comando previsto no art. 896, §1º-A, I e III, da CLT. Agravo de instrumento a que se nega provimento. FÉRIAS. TRANSCRIÇÃO SOMENTE DA PARTE DISPOSITIVA DO ACÓRDÃO RECORRIDO E EM TÓPICO APARTADO. INOBSERVÂNCIA DO PRESSUPOSTO FIXADO NO ART. 896, § 1º-A, III, DA CLT. TRANSCENDÊNCIA PREJUDICADA. 1. No tocante ao tema \" FÉRIAS \", das razões do recurso de revista, também se nota que a ré não procedeu à adequada indicação do trecho do acórdão regional que examinou a controvérsia, deixando de cumprir o ônus que lhe incumbia. 2. Nesse contexto, cumpre ressaltar que a mera transcrição da parte dispositiva do acórdão recorrido, providência inócua ao atendimento do ônus de indicação do trecho específico que evidencia o prequestionamento da matéria objeto do recurso de revista, sobretudo quando realizada em tópico apartado, e dissociada das razões recursais, não se presta a atender o comando previsto no art. 896, § 1º-A, I e III, da CLT. Agravo de instrumento a que se nega provimento. PLR. TRANSCRIÇÃO SOMENTE DA PARTE DISPOSITIVA DO ACÓRDÃO RECORRIDO E EM TÓPICO APARTADO. INOBSERVÂNCIA DO PRESSUPOSTO FIXADO NO ART. 896, § 1º-A, III, DA CLT. TRANSCENDÊNCIA PREJUDICADA. 1. Quanto ao tema \" PLR \", das razões do recurso de revista, igualmente não houve transcrição específica do acórdão recorrido. 2. Nesse contexto, cumpre ressaltar que a mera transcrição da parte dispositiva do acórdão recorrido, providência inócua ao atendimento do ônus de indicação do trecho específico que evidencia o prequestionamento da matéria objeto do recurso de revista, sobretudo quando realizada em tópico apartado, e dissociada das razões recursais, não se presta a atender o comando previsto no art. 896, §1º-A, I e III, da CLT. Agravo de instrumento a que se nega provimento. JUSTIÇA GRATUITA. TRANSCRIÇÃO SOMENTE DA PARTE DISPOSITIVA DO ACÓRDÃO RECORRIDO E EM TÓPICO APARTADO. INOBSERVÂNCIA DO PRESSUPOSTO FIXADO NO ART. 896, § 1º-A, III, DA CLT. TRANSCENDÊNCIA PREJUDICADA. 1. Quanto ao tema \" DA JUSTIÇA GRATUITA \", das razões do recurso de revista, a parte ré também não transcreveu o trecho do acórdão regional que examinou a matéria. 2. Nesse contexto, cumpre ressaltar que a mera transcrição da parte dispositiva do acórdão recorrido, providência inócua ao atendimento do ônus de indicação do trecho específico que evidencia o prequestionamento da matéria objeto do recurso de revista, sobretudo quando realizada em tópico apartado, e dissociada das razões recursais, não se presta a atender o comando previsto no art. 896, § 1º-A, I e III, da CLT. Agravo de instrumento a que se nega provimento. AGRAVO DE INSTRUMENTO DO AUTOR. NEGATIVA DE PRESTAÇÃO JURISDICIONAL. APLICABILIDADE DA LEI N. 13.467/2017 AOS CONTRATOS EM CURSO. INOCORRÊNCIA. 1. A parte agravante sustenta que, com relação ao intervalo intrajornada e ao acordo de compensação de horas, \" existe omissão e contradição nesses particulares, quanto à inaplicabilidade da reforma trabalhista no caso concreto, em razão do fato de o obreiro ter sido admitido em 17/3/2017, pois a Lei 13.467/2017 somente pode ser aplicada aos contratos de trabalho celebrados após a vigência em 11/11/2017, o que não é o caso dos autos\" . 2. A ocorrência de nulidade por negativa de prestação jurisdicional estará caracterizada na hipótese de ausência de posicionamento judicial a respeito de fatos relevantes para a controvérsia, de tal forma que inviabilize a devolução da matéria à instância Superior. 3. No caso dos autos, todavia, verifica-se que o Tribunal Regional examinou expressamente a matéria relativa à inaplicabilidade da Lei n. 13.467/2017 aos contratos em curso. O acórdão do TRT consignou que: \" o regime jurídico trabalhista vigente no momento da prestação dos serviços regula o direito a ser tutelado, e não há direito adquirido ao regime jurídico que inicialmente balizou a contratação, já que, sendo o contrato de trabalho de trato sucessivo, os deveres e as obrigações se renovam periodicamente, conforme a lei vigente no momento do fato em discussão \". 3. Nesse sentido, o acórdão regional registrou, de forma expressa, que: \" no caso, declaradas prescritas em sentença as pretensões anteriores a 8.12.2017, do período imprescrito em diante, o contrato do autor estava sob regime da Lei 13.467/2017 \". 4. Portanto, diversamente do que sustenta o agravante, observa-se que o Tribunal Regional não se omitiu, tendo analisado expressamente a controvérsia sobre a aplicação da Lei n. 13.467/2017 e fundamentado sua decisão de forma clara e suficiente. O fato de o acórdão recorrido não ter adotado a tese defendida pela parte agravante não configura negativa de prestação jurisdicional. 5. Assim, o que se percebe é que, embora a pretensão recursal gire em torno da negativa de prestação jurisdicional, o que se verifica não é a omissão do Tribunal Regional, mas o inconformismo da parte com a solução adotada pela Corte de origem. Agravo de instrumento a que se nega provimento. COMPENSAÇÃO DE JORNADA. PRESTAÇÃO DE HORAS EXTRAS HABITUAIS. PERÍODO DE VIGÊNCIA DO CONTRATO ANTES E APÓS DA LEI N. 13.467/2017. TEMPUS REGIT ACTUM . INEXISTÊNCIA DE DIREITO ADQUIRIDO A REGIME JURÍDICO. 1. O Tribunal Pleno desta Corte Superior, em 25/11/2024, no julgamento do Tema Repetitivo 23 (IncJulgRREmbRep - 528-80.2018.5.14.0004, acórdão pendente de publicação), firmou entendimento de que: \" a Lei n. 13.467/2017 possui aplicação imediata aos contratos de trabalho em curso, passando a regular os direitos decorrentes de lei cujos fatos geradores tenham se efetivado a partir de sua vigência \". 2. Nesse contexto, a partir de 11/11/2017, o art. 59-B, parágrafo único, da CLT (incluído pela Lei n. 13.467/2017), passou a estabelecer que: \" a prestação de horas extras habituais não descaracteriza o acordo de compensação de jornada e o banco de horas \". 3. Dessa forma, passando a ser possível, com a vigência da Lei n. 13.467/2017, o reconhecimento da validade do acordo de compensação de jornada, mesmo nas hipóteses em que constatada a prestação habitual de horas extras, a condenação da parte ré ao pagamento de diferenças a título de trabalho extraordinário, nos moldes do entendimento anterior à \" reforma trabalhista \", deve ser limitada a 10/11/2017, véspera da entrada em vigor da referida lei. Agravo de instrumento a que se nega provimento. HORAS EXTRAS. DIFERENÇAS. MATÉRIA FÁTICA. ÓBICE DA SÚMULA N. 126 DO TST. 1. Em relação ao tema em epígrafe, o Tribunal Regional, soberano na análise do conjunto fático-probatório, consignou, de forma expressa, que: \" de proêmio, observo que a reclamada não apresentou a integralidade dos cartões de ponto: nos anos de 2017 e 2018, consta somente o registro de março e abril, ao passo que os controles de 2019 se iniciam no mês de junho. O único ano em que foram juntados todos os cartões de ponto é 2020 (de4f3e9)\". Acrescentou que: \"a reclamada ainda apresentou holerites em que consta pagamento de ‘hora extra 50%’ e ‘hora extra 100%’, com os respectivos comprovantes de quitação, razão pela qual caberia ao reclamante demonstrar, ainda que por amostragem, eventuais diferenças devidas\". 2. Ademais, asseverou que no período em que os cartões de ponto foram reputados válidos, estes não foram desconstituídos por prova em contrário, apresentando registros compatíveis com a jornada alegada. Nos termos do acórdão recorrido, \" reputa-se válidos os controles de jornada no período em que o autor exerceu o trabalho em jornada 6x1, os quais não foram desconstituídos por prova em contrário, sobretudo porque a jornada registrada coincide ou extrapola em certos dias aquela indicada pelo autor\". 3. Ainda, a Corte de origem ressaltou que o autor não demonstrou a existência de diferenças de horas extras nesse período, sequer por amostragem, limitando sua insurgência ao período anterior. Afirmou que: \" em réplica, no entanto, limitou-se o autor a apontar diferenças apenas do período em que laborou no regime 12x36. Não foram apontadas diferenças de horas extras para os períodos em que houve juntada do controle de jornada, e nada evidencia que as diferenças pretendidas seriam perceptíveis nos períodos não cobertos pela prova documental \". 4. Nesse contexto, o TRT concluiu pela inexistência de diferenças de horas extras no período remanescente do contrato, assentando que não há elementos para se inferir jornada superior à registrada. 5. Verifica-se, portanto, que a controvérsia foi dirimida com base na análise do conjunto fático-probatório dos autos, especialmente quanto à validade dos controles de jornada, à comprovação dos pagamentos efetuados e à ausência de demonstração de diferenças pelo autor. 6. Desse modo, para se chegar à conclusão diversa da adotada pelo Tribunal Regional seria imprescindível o reexame dos fatos e das provas dos autos, procedimento vedado nesta instância extraordinária, nos termos da Súmula n. 126 do TST. Agravo de instrumento a que se nega provimento. RECURSO DE REVISTA DO AUTOR. JORNADA DE TRABALHO. JUNTADA PARCIAL DOS CONTROLES DE PONTO. PERÍODO FALTANTE. PRESUNÇÃO DE VERACIDADE QUANTO AO PERÍODO EM QUE NÃO APRESENTADOS OS CARTÕES DE PONTO. SÚMULA N. 338/TST. 1. A controvérsia cinge-se acerca da fixação da jornada de trabalho do obreiro quando há nos autos a juntada parcial do controle de ponto pela ré. 2. Sobre a juntada de controle de ponto e demonstração da jornada de trabalho, a norma processual vigente fixa que será da parte autora o ônus de provar a jornada extraordinária alegada na inicial (arts. 818, I, da CLT e 373, I, do CPC). Ocorre que a norma trabalhista, atenta às condições fáticas de uma relação de trabalho em regime celetista, estabeleceu, no art. 74, § 2º, da CLT, ser obrigatório o controle de jornada dos empregados para as empresas que contêm mais de dez trabalhadores até a vigência da Lei n. 13.874/19 (que alterou para mais de vinte este quantitativo). 3. A jurisprudência desta Corte Superior é pacífica no sentido de que o empregador enquadrado no art. 74, § 2º, da CLT é obrigado a trazer aos autos os controles de jornada dos empregados, a teor da Súmula n. 338, I, do TST. No caso de apresentação parcial dos controles de frequência, a jurisprudência da SbDI-1 consolidou-se para reconhecer a jornada de trabalho declinada na petição inicial em relação aos meses faltantes. Precedente. 4. Apresentados parcialmente os cartões de ponto, e não sendo possível extrair do acórdão regional qualquer elemento fático capaz de afastar as declarações da parte autora, forçoso concluir pela veracidade da jornada declinada na inicial quanto ao período em que não foram apresentados os controles de frequência. Recurso de revista conhecido e provido. DIREITO INTERTEMPORAL. INTERVALO INTRAJORNADA. NÃO CONCESSÃO OU CONCESSÃO PARCIAL. ART. 71, § 4º, DA CLT. SITUAÇÃO POSTERIOR À LEI N. 13.467/2017. TEMPUS REGIT ACTUM . INEXISTÊNCIA DE DIREITO ADQUIRIDO A REGIME JURÍDICO. APLICAÇÃO IMEDIATA DA NOVA LEI ÀS SITUAÇÕES CONSTITUÍDAS APÓS A SUA ENTRADA EM VIGOR. 1. Na hipótese, o Tribunal Regional reformou a sentença para que: \"a reparação pela diminuição do intervalo intrajornada mínimo de uma hora fique limitada à indenização referente ao período suprimido, com acréscimo de 50% sobre o valor da remuneração da hora normal de trabalho, nos moldes do artigo 71, §4º, do texto consolidado, com redação dada pela Lei 13.467/2017\". 2. O Tribunal Pleno desta Corte Superior, em 25/10/2024, no julgamento do Tema Repetitivo 23 (IncJulgRREmbRep - 528-80.2018.5.14.0004), firmou entendimento de que: \"A Lei n. 13.467/2017 possui aplicação imediata aos contratos de trabalho em curso, passando a regular os direitos decorrentes de lei cujos fatos geradores tenham se efetivado a partir de sua vigência\". 3. Logo, a nova disciplina do art. 71, § 4º, da CLT é aplicável aos contratos de trabalho em curso quanto às situações constituídas a partir de 11/11/2017, data de entrada em vigor da Lei n. 13.467/2017, ressalvada a existência de norma coletiva, regulamentar ou contratual em sentido diverso e preservados os direitos adquiridos e os atos jurídicos perfeitos relativos a situações consolidadas sob a égide do anterior regime legal. Recurso de revista não conhecido.",
+    "ementaNaoAnalisada": "removido no backend",
+    "txtInteiroTeor": "removido no backend",
+    "txtInteiroTeorNaoAnalisado": "removido no backend",
+    "inteiroTeorHtml": "<html>\n  <head>\n    <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n     ",
+    "inteiroTeorRtf": "removido no backend",
+    "dispositivo": ", por unanimidade: I - conhecer do agravo de instrumento da ré e, no mérito, negar-lhe provimento; II - conhecer do agravo de instrumento do autor e, no mérito, negar-lhe provimento; e III - conhecer parcialmente do recurso de revista do autor por contrariedade à Súmula n. 338, I, do TST e, no mérito, dar-lhe provimento para determinar que, quanto ao período em que não houve apresentação de cartões de ponto, observado o prazo prescricional, as diferenças salariais devidas em relação à jornada de trabalho sejam apuradas de acordo com a jornada alegada na petição inicial.",
+    "dispositivoNaoAnalisado": "removido no backend",
+    "numeracaoUnica": {
+     "numero": 1001684,
+     "digito": 30,
+     "ano": 2022,
+     "orgao": 5,
+     "tribunal": 2,
+     "vara": 53
+    },
+    "numeracaoAnterior": {},
+    "numProcDocumento": 172127467,
+    "txtTemaProc": "13765,13769,13772,13807,13814,13851,13895,13998",
+    "temaProcs": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "codCPFSignatario": "51062712900"
+   },
+   "destaques": {
+    "txtInteiroTeor": [
+     "A parte agravante sustenta que, com relação ao <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> e ao acordo de compensação de horas, \" existe omissão e contradição nesses particulares",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j>. NÃO CONCESSÃO OU CONCESSÃO PARCIAL. ART. 71, § 4º, DA CLT. SITUAÇÃO POSTERIOR À LEI N. 13.467/2017. TEMPUS REGIT ACTUM .",
+     "Na hipótese, o Tribunal Regional reformou a sentença para que: \"a reparação pela diminuição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> mínimo de uma hora fique limitada",
+     "A parte agravante sustenta que, com relação ao <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> e o acordo de compensação de horas, \" existe omissão e contradição nesses particulares",
+     "<tst_j>Intervalo</tst_j> <tst_j>Intrajornada</tst_j>.",
+     "Aduziu que prorrogava a jornada uma vez por semana, por uma ou duas horas, e que o <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> era de no máximo trinta minutos.",
+     "A primeira reclamada, ora recorrente, defendeu que havia regular fruição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, que os horários de trabalho eram corretamente anotados",
+     "convite do reclamante confirmou que o reclamante laborava em escala 12x36, das 7h45min às 23h e em escala 6x1, das 15h às 23h, usufruindo 30 minutos de <tst_j>intervalo</tst_j>",
+     "fixo a jornada de trabalho do reclamante como sendo: no período de 17.03.2017 a outubro de 2018, na escala 12x36, das 7h45min às 23h, com 30 minutos de <tst_j>intervalo</tst_j>",
+     "dias na semana e uma hora nos demais dias e, no período de novembro de 2018 até a rescisão contratual, em escala 6x1, das 15h às 23h, com 30 minutos de <tst_j>intervalo</tst_j>",
+     "<tst_j>intrajornada</tst_j> em três dias da semana e uma hora nos demais dias.",
+     "Por conseguinte, considerando o <tst_j>intervalo</tst_j> para repouso e alimentação fixado, julgo procedente o pedido de pagamento de uma hora extra pela não fruição",
+     "integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, acrescidas do adicional de 50% (art. 71, §4º, da CLT), até a entrada em vigor da Lei n. 13.467/17.",
+     "Ainda, em face da jornada de trabalho fixada, julgo procedente o pedido de pagamento de horas extras, computado o período suprimido do <tst_j>intervalo</tst_j>, por dia",
+     "de efetivo trabalho, pela não fruição integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, acrescidas do adicional de 50%, nos termos do art. 71 da CLT, após a entrada",
+     "O inconformismo da reclamada não prospera quanto à sua condenação no pagamento de indenização referente ao período destinado ao <tst_j>intervalo</tst_j> para refeição",
+     "autos, o juízo de origem apontou de modo claro a avaliação da prova oral, destacando que a tese do reclamante de fruição de apenas trinta minutos de <tst_j>intervalo</tst_j>",
+     "percepção do magistrado quanto às informações trazidas em audiência, não havendo subsídio suficiente para ensejar a modificação do julgado em relação ao <tst_j>intervalo</tst_j>",
+     "<tst_j>intrajornada</tst_j> ali demonstrado.",
+     "Portanto, confirma-se a sentença no ponto em que reconheceu a fruição de trinta minutos de <tst_j>intervalo</tst_j> para repouso e alimentação em três dias na semana",
+     "Reforma-se a sentença para que a reparação pela diminuição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> mínimo de uma hora fique limitada à indenização referente ao período",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j>. NÃO CONCESSÃO OU CONCESSÃO PARCIAL. ART. 71, § 4º, DA CLT. SITUAÇÃO POSTERIOR À LEI N. 13.467/2017. TEMPUS REGIT ACTUM .",
+     "<tst_j>Intervalo</tst_j> <tst_j>Intrajornada</tst_j>.",
+     "Aduziu que prorrogava a jornada uma vez por semana, por uma ou duas horas, e que o <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> era de no máximo trinta minutos.",
+     "A primeira reclamada, ora recorrente, defendeu que havia regular fruição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, que os horários de trabalho eram corretamente anotados",
+     "convite do reclamante confirmou que o reclamante laborava em escala 12x36, das 7h45min às 23h e em escala 6x1, das 15h às 23h, usufruindo 30 minutos de <tst_j>intervalo</tst_j>",
+     "fixo a jornada de trabalho do reclamante como sendo: no período de 17.03.2017 a outubro de 2018, na escala 12x36, das 7h45min às 23h, com 30 minutos de <tst_j>intervalo</tst_j>",
+     "dias na semana e uma hora nos demais dias e, no período de novembro de 2018 até a rescisão contratual, em escala 6x1, das 15h às 23h, com 30 minutos de <tst_j>intervalo</tst_j>",
+     "<tst_j>intrajornada</tst_j> em três dias da semana e uma hora nos demais dias.",
+     "Por conseguinte, considerando o <tst_j>intervalo</tst_j> para repouso e alimentação fixado, julgo procedente o pedido de pagamento de uma hora extra pela não fruição",
+     "integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, acrescidas do adicional de 50% (art. 71, §4º, da CLT), até a entrada em vigor da Lei n. 13.467/17.",
+     "Ainda, em face da jornada de trabalho fixada, julgo procedente o pedido de pagamento de horas extras, computado o período suprimido do <tst_j>intervalo</tst_j>, por dia",
+     "de efetivo trabalho, pela não fruição integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>, acrescidas do adicional de 50%, nos termos do art. 71 da CLT, após a entrada",
+     "O inconformismo da reclamada não prospera quanto à sua condenação no pagamento de indenização referente ao período destinado ao <tst_j>intervalo</tst_j> para refeição",
+     "autos, o juízo de origem apontou de modo claro a avaliação da prova oral, destacando que a tese do reclamante de fruição de apenas trinta minutos de <tst_j>intervalo</tst_j>",
+     "percepção do magistrado quanto às informações trazidas em audiência, não havendo subsídio suficiente para ensejar a modificação do julgado em relação ao <tst_j>intervalo</tst_j>",
+     "<tst_j>intrajornada</tst_j> ali demonstrado.",
+     "Portanto, confirma-se a sentença no ponto em que reconheceu a fruição de trinta minutos de <tst_j>intervalo</tst_j> para repouso e alimentação em três dias na semana",
+     "Reforma-se a sentença para que a reparação pela diminuição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> mínimo de uma hora fique limitada à indenização referente ao período",
+     "Na hipótese, o Tribunal Regional reformou a sentença para que: \"a reparação pela diminuição do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> mínimo de uma hora fique limitada",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j>. NÃO CONCESSÃO OU CONCESSÃO PARCIAL. ART. 71, § 4º, DA CLT. SITUAÇÃO POSTERIOR À LEI Nº 13.467/2017. TEMPUS REGIT ACTUM.",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j>. LIMITAÇÃO AO PERÍODO NÃO USUFRUÍDO. DIREITO INTERTEMPORAL.",
+     "Esta Turma adotava o entendimento de que as normas que tratam do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> são de natureza puramente material, aplicando-se, assim, as normas",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j>. CONCESSÃO PARCIAL. DIREITO MATERIAL. CONTRATO DE TRABALHO VIGENTE À ÉPOCA DA ENTRADA EM VIGOR DA LEI 13.467/17.",
+     "<tst_j>INTERVALO</tst_j> <tst_j>INTRAJORNADA</tst_j> PARCIALMENTE CONCEDIDO. DIREITO INTERTEMPORAL. CONTRATO COM VIGÊNCIA ANTES E APÓS A LEI N° 13.467/2017.",
+     "O pagamento integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> parcialmente concedido não estava expressamente previsto em lei, mas tão somente no item I da Súmula 437",
+     "A nova redação do § 4º do art. 71 da CLT dada pela Lei nº 13.467/17 esclareceu ser devida apenas a indenização do período suprimido do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j>",
+     "Portanto, após 10/11/2017 não há que se falar no pagamento integral do <tst_j>intervalo</tst_j> <tst_j>intrajornada</tst_j> parcialmente usufruído."
+    ]
+   }
+  },
+  {
+   "registro": {
+    "txtEmentaHighlight": "<html>\n <head>\n  <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n        ",
+    "inteiroTeorHTMLHighlight": "<html>\n <head>\n  <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n        ",
+    "id": "65c070c345be500766e8b7c9bb7a9b4a",
+    "numero": "10005779220235020706",
+    "tipo": {
+     "codigoTipoJurisprudencia": "ACORDAO",
+     "nome": "Acordão"
+    },
+    "orgaoJudicante": {
+     "codigo": 19,
+     "descricao": "4ª Turma"
+    },
+    "orgao": {
+     "numero": 0,
+     "nome": "Tribunal Superior do Trabalho",
+     "sigla": "TST"
+    },
+    "numProcInt": 1020782,
+    "anoProcInt": 0,
+    "numProc": 1000577,
+    "anoProc": 2023,
+    "codFase": "AIRR",
+    "indTipAcordao": "R",
+    "dtaJulgamento": "2026-06-26T23:59:59-03",
+    "numFormatado": "Ag-AIRR - 1000577-92.2023.5.02.0706",
+    "numInterno": 0,
+    "dtaPublicacao": "2026-07-16T14:20:21-03",
+    "dtaOrdenacao": "2026-07-16T14:20:21-03",
+    "dtaAtualizacao": "2026-07-19T09:04:23-03",
+    "codMinRelator": "GMMCP",
+    "nomRelator": "maria cristina irigoyen peduzzi",
+    "sexRelator": "F",
+    "ementaHtml": "removido no backend",
+    "ementa": "AGRAVO DA EXECUTADA - AGRAVO DE INSTRUMENTO EM RECURSO DE REVISTA INTERPOSTO SOB A ÉGIDE DA LEI Nº 13.467/2017 – EXECUÇÃO – HORAS EXTRAS – BASE DE CÁLCULO - AUSÊNCIA DE TRANSCRIÇÃO DO TRECHO DO ACÓRDÃO REGIONAL - INOBSERVÂNCIA DO ART. 896, § 1º-A, I, DA CLT – TRANSCENDÊNCIA NÃO RECONHECIDA 1. No tópico, o Recurso de Revista não atende aos requisitos do artigo 896, § 1º-A, inciso I, da CLT. 2. A decisão agravada observou os artigos 932, III e IV, \"a\", do CPC e 5º, LXXVIII, da Constituição da República, não comportando reconsideração ou reforma. Agravo a que se nega provimento, com aplicação de multa, nos termos do art. 1.021, § 4º, do CPC.",
+    "ementaNaoAnalisada": "removido no backend",
+    "txtInteiroTeor": "removido no backend",
+    "txtInteiroTeorNaoAnalisado": "removido no backend",
+    "inteiroTeorHtml": "<html>\n  <head>\n    <style>\n      <!--\n        p.headingaa {\n          LeftIndent:0.0;\n          RightIndent:0.0;\n          FirstLineIndent:0.0;\n     ",
+    "inteiroTeorRtf": "removido no backend",
+    "dispositivo": ", por unanimidade, negar provimento ao Agravo, aplicando multa de 2% (dois por cento) à Agravante, com fundamento no art. 1.021, § 4º, do CPC.",
+    "dispositivoNaoAnalisado": "removido no backend",
+    "numeracaoUnica": {
+     "numero": 1000577,
+     "digito": 92,
+     "ano": 2023,
+     "orgao": 5,
+     "tribunal": 2,
+     "vara": 706
+    },
+    "numeracaoAnterior": {},
+    "numProcDocumento": 179401266,
+    "txtTemaProc": "13772,13787",
+    "temaProcs": [
+     null,
+     null
+    ],
+    "codCPFSignatario": "14441829191"
+   },
+   "destaques": {
+    "txtInteiroTeor": [
+     "1/2025 – destaques acrescidos) AGRAVO DA PARTE RECLAMADA – AGRAVO DE INSTRUMENTO EM RECURSO DE REVISTA INTERPOSTO SOB A ÉGIDE DA LEI Nº 13.467/2017 – <tst_j>INTERVALO</tst_j>",
+     "<tst_j>INTRAJORNADA</tst_j> – AUSÊNCIA DE TRANSCRIÇÃO DO TRECHO (ART. 896, 1º-A, I, DA CLT) - TRANSCENDÊNCIA NÃO RECONHECIDA Conforme consignado na decisão agravada,",
+     "INEXISTÊNCIA DE TRABALHO EM SOBREJORNADA E DE SUPRESSÃO DOS <tst_j>INTERVALOS</tst_j> <tst_j>INTRAJORNADAS</tst_j>. 1.5. ASSISTÊNCIA JUDICIÁRIA GRATUITA. I."
+    ]
+   }
+  }
+ ],
+ "agregacoes": [
+  {
+   "nome": "tiposJurisprudencia",
+   "mapaTermoQuantidade": {
+    "ACORDAO": 361779
+   },
+   "respostasSubAgregacoes": {}
+  }
+ ]
+}

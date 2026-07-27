@@ -61,7 +61,7 @@ sys.path.insert(0, str(ROOT))
 
 from App.database import upsert_jurisprudencia  # noqa: E402
 from App.services.embedding_service import gerar_embedding  # noqa: E402
-from App.services.scrapers import STJScraper  # noqa: E402
+from App.services.scrapers import STJScraper, TSTScraper  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,8 +71,8 @@ logger = logging.getLogger("scrape_jurisprudencia")
 
 SCRAPERS = {
     "stj": STJScraper,
-    # 'tjpe': TJPEScraper,  # PR20
-    # 'tst': TSTScraper,    # PR21
+    "tst": TSTScraper,  # PR31 — API REST publica, sem Cloudflare/auth
+    # 'tjpe': TJPEScraper,  # futuro
 }
 
 

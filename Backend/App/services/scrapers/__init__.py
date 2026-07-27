@@ -12,5 +12,6 @@ Pra adicionar um novo tribunal:
 """
 
 from .stj import STJScraper
+from .tst import TSTScraper
 
-__all__ = ["STJScraper"]
+__all__ = ["STJScraper", "TSTScraper"]
