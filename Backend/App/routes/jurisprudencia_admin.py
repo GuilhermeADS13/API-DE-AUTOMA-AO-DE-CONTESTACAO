@@ -16,7 +16,16 @@ CRUD do PR23 trabalha por `id` (BIGSERIAL) — separado da chave de negocio.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
+from pydantic import BaseModel, Field
 
 from App.limiter import limiter
 from App.models.jurisprudencia_manual import JurisprudenciaManual
@@ -299,4 +308,68 @@ async def deletar(
         "status": "ok",
         "id": jurisprudencia_id,
         "mensagem": f"id={jurisprudencia_id} removida com sucesso.",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PR34 — Ingestao em lote agendada (scraper TST/CARF via n8n Schedule Trigger)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ScrapeLoteRequest(BaseModel):
+    """Corpo do POST /admin/jurisprudencia/scrape."""
+
+    fonte: str = Field(default="tst", description="tst (trabalhista) | carf (tributario) | todas")
+    max_por_tema: int = Field(default=4, ge=1, le=20)
+
+
+def _rodar_scrape_background(fonte: str, max_por_tema: int) -> None:
+    """Roda a ingestao em background. Excecoes ficam nos logs (nao ha response)."""
+    from App.services.jurisprudencia_ingest import FONTES, ingerir_lote
+
+    fontes = sorted(FONTES) if fonte == "todas" else [fonte]
+    for f in fontes:
+        try:
+            stats = ingerir_lote(f, max_por_tema=max_por_tema)
+            logger.info("Scrape agendado concluido: %s", stats)
+        except Exception as err:  # noqa: BLE001 — background; so loga
+            logger.error("Scrape agendado falhou fonte=%s: %s", f, err)
+
+
+@router.post("/admin/jurisprudencia/scrape", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("6/hour")
+async def scrape_lote(
+    request: Request,
+    payload: ScrapeLoteRequest,
+    background_tasks: BackgroundTasks,
+    usuario: dict[str, str] = Depends(exige_admin_dep),
+) -> dict:
+    """Dispara ingestao em lote de jurisprudencia (assincrono).
+
+    Alvo do Schedule Trigger do n8n pra crescer a base sem intervencao. Valida
+    a fonte, agenda a coleta em background (dura ~50-80s por fonte) e retorna
+    202 imediatamente — o n8n nao fica preso esperando. Stats vao pros logs.
+
+    Fontes: `tst` (trabalhista), `carf` (tributario) ou `todas`.
+    """
+    from App.services.jurisprudencia_ingest import FONTES
+
+    fonte = payload.fonte.lower().strip()
+    validas = {*FONTES, "todas"}
+    if fonte not in validas:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"fonte invalida: {fonte!r} (use {sorted(validas)}).",
+        )
+
+    background_tasks.add_task(_rodar_scrape_background, fonte, payload.max_por_tema)
+    logger.info(
+        "Scrape em lote agendado: fonte=%s max=%d por %s",
+        fonte, payload.max_por_tema, usuario.get("email", "?"),
+    )
+    return {
+        "status": "accepted",
+        "fonte": fonte,
+        "max_por_tema": payload.max_por_tema,
+        "mensagem": "Ingestao iniciada em background. Veja stats nos logs do backend.",
     }
