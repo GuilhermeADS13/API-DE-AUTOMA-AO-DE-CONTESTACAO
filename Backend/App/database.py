@@ -1171,6 +1171,7 @@ def _iso_or_str(value: Any) -> str:
 # downstream so usam essas chaves.
 AREAS_JURIDICAS_CANONICAS = frozenset({
     "trabalhista",
+    "tributario",
     "consumidor",
     "bancario",
     "previdenciario",
@@ -1181,6 +1182,7 @@ AREAS_JURIDICAS_CANONICAS = frozenset({
 # Mantemos ordenado por especificidade (mais especifico primeiro) pra evitar
 # que "previdenciario" case com "civel" generico via "responsab".
 _AREA_KEYWORDS = (
+    ("tributario", ("tribut", "icms", "cofins", "pis/pasep", "irpj", "csll", " ipi", " iss", "carf", "lancamento fiscal", "credito presumido", "planejamento tribut")),
     ("trabalhista", ("trabalh", "clt ", "celetist", "rescis", "horas extras", "fgts", "ctps", "verbas rescis")),
     ("previdenciario", ("previd", "inss", "aposent", "beneficio", "lei 8213")),
     ("consumidor", ("consumidor", "cdc", "compra ", "produto defeituoso", "vicio do produto", "lei 8078")),

@@ -1,0 +1,42 @@
+{
+  "responseHeader": {
+    "zkConnected": true,
+    "status": 0,
+    "QTime": 17,
+    "params": {
+      "q": "PIS COFINS creditamento insumos",
+      "defType": "edismax",
+      "qf": "ementa_s^3 decisao_txt",
+      "fl": "numero_decisao_s,numero_processo_s,nome_relator_s,dt_sessao_tdt,secao_s,camara_s,turma_s,ementa_s,ano_sessao_s",
+      "start": "0",
+      "rows": "8",
+      "wt": "json"
+    }
+  },
+  "response": {
+    "numFound": 11895,
+    "start": 0,
+    "docs": [
+      {
+        "ementa_s": "Assunto: Contribuição para o PIS/Pasep\nPeríodo de apuração: 01/10/2005 a 31/12/2005\nCOMBUSTÍVEIS DERIVADOS DE PETRÓLEO. DISTRIBUIDORES E VAREJISTAS. INCIDÊNCIA MONOFÁSICA. NÃO CUMULATIVIDADE. APURAÇÃO DE CRÉDITOS. IMPOSSIBILIDADE.\nA incidência monofásica é incompatível com o creditamento nas etapas desoneradas da contribuição, nas quais não há cumulatividade a ser evitada. A inclusão das receitas com a venda de óleo diesel e gasolina no regime não cumulativo não abarca os distribuidores e comerciantes varejistas dos produtos, que ficam impossibilitados de se creditar das despesas com frete e armazenagem vinculados à revenda de bens ou produtos.\nEDIFICAÇÕES E BENFEITORIAS EM IMÓVEIS. ENCARGOS DE DEPRECIAÇÃO. CREDITAMENTO. IMPOSSIBILIDADE.\nOs encargos de depreciação devem ser determinados mediante a aplicação da taxa de depreciação fixada pela Secretaria da Receita Federal em função do prazo de vida útil do bem e somente pode haver a sua contabilização, no caso de benfeitorias em imóveis de terceiros, se a assunção do ônus com as obras se der em caráter definitivo.\n",
+        "turma_s": "Terceira Turma Especial da Terceira Seção",
+        "numero_processo_s": "13603.001615/2007-91",
+        "numero_decisao_s": "3803-005.248",
+        "nome_relator_s": "JOAO ALFREDO EDUAO FERREIRA",
+        "secao_s": "Terceira Seção De Julgamento",
+        "dt_sessao_tdt": "2014-01-29T00:00:00Z",
+        "ano_sessao_s": "2014"
+      },
+      {
+        "ementa_s": "Assunto: Contribuição para o Financiamento da Seguridade Social - Cofins\nPeríodo de apuração: 01/10/2005 a 31/12/2005\nCOMBUSTÍVEIS DERIVADOS DE PETRÓLEO. DISTRIBUIDORES E VAREJISTAS. INCIDÊNCIA MONOFÁSICA. NÃO CUMULATIVIDADE. APURAÇÃO DE CRÉDITOS. IMPOSSIBILIDADE.\nA incidência monofásica é incompatível com o creditamento nas etapas desoneradas da contribuição, nas quais não há cumulatividade a ser evitada. A inclusão das receitas com a venda de óleo diesel e gasolina no regime não cumulativo não abarca os distribuidores e comerciantes varejistas dos produtos, que ficam impossibilitados de se creditar das despesas com frete e armazenagem vinculados à revenda de bens ou produtos.\nEDIFICAÇÕES E BENFEITORIAS EM IMÓVEIS. ENCARGOS DE DEPRECIAÇÃO. CREDITAMENTO. IMPOSSIBILIDADE.\nOs encargos de depreciação devem ser determinados mediante a aplicação da taxa de depreciação fixada pela Secretaria da Receita Federal em função do prazo de vida útil do bem e somente pode haver a sua contabilização, no caso de benfeitorias em imóveis de terceiros, se a assunção do ônus com as obras se der em caráter definitivo.\n",
+        "turma_s": "Terceira Turma Especial da Terceira Seção",
+        "numero_processo_s": "13603.001643/2007-16",
+        "numero_decisao_s": "3803-005.249",
+        "nome_relator_s": "JOAO ALFREDO EDUAO FERREIRA",
+        "secao_s": "Terceira Seção De Julgamento",
+        "dt_sessao_tdt": "2014-01-29T00:00:00Z",
+        "ano_sessao_s": "2014"
+      }
+    ]
+  }
+}
