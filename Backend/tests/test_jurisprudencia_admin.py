@@ -454,3 +454,60 @@ def test_delete_200_quando_existia(auth_como_admin):
     assert data["id"] == 42
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PR34 — POST /admin/jurisprudencia/scrape (ingestao em lote agendada)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_scrape_sem_auth_bloqueia():
+    """Sem token, a dependency real rejeita (nao dispara ingestao)."""
+    resp = client.post("/api/admin/jurisprudencia/scrape", json={"fonte": "tst"})
+    assert resp.status_code in (401, 403)
+
+
+def test_scrape_admin_202_agenda_background(auth_como_admin):
+    """Admin -> 202 imediato e agenda o background com os parametros certos.
+
+    O background e mockado: o teste NAO roda scraper/embedding/DB reais.
+    """
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.routes.jurisprudencia_admin._rodar_scrape_background") as mock_bg,
+    ):
+        resp = client.post(
+            "/api/admin/jurisprudencia/scrape",
+            json={"fonte": "todas", "max_por_tema": 3},
+        )
+    assert resp.status_code == 202
+    data = resp.json()
+    assert data["status"] == "accepted"
+    assert data["fonte"] == "todas"
+    assert data["max_por_tema"] == 3
+    # TestClient executa o background apos a resposta -> mock chamado 1x
+    mock_bg.assert_called_once_with("todas", 3)
+
+
+def test_scrape_fonte_invalida_422(auth_como_admin):
+    """Fonte fora de {tst, carf, todas} -> 422 antes de agendar nada."""
+    with (
+        patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}),
+        patch("App.routes.jurisprudencia_admin._rodar_scrape_background") as mock_bg,
+    ):
+        resp = client.post(
+            "/api/admin/jurisprudencia/scrape", json={"fonte": "supremo"}
+        )
+    assert resp.status_code == 422
+    assert "fonte" in resp.json()["detail"].lower()
+    mock_bg.assert_not_called()
+
+
+def test_scrape_max_por_tema_fora_da_faixa_422(auth_como_admin):
+    """max_por_tema > 20 barra na validacao Pydantic (le=20)."""
+    with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@jurisflow.com"}):
+        resp = client.post(
+            "/api/admin/jurisprudencia/scrape",
+            json={"fonte": "tst", "max_por_tema": 999},
+        )
+    assert resp.status_code == 422
+
+

@@ -23,6 +23,7 @@ _DATE_ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # Mantido em sync com Backend/App/database.py AREAS_JURIDICAS_CANONICAS.
 AreaJuridica = Literal[
     "trabalhista",
+    "tributario",
     "consumidor",
     "bancario",
     "previdenciario",

@@ -11,7 +11,8 @@ Pra adicionar um novo tribunal:
 4. Registrar em `scripts/scrape_jurisprudencia.py` no dispatch por tribunal
 """
 
+from .carf import CARFScraper
 from .stj import STJScraper
 from .tst import TSTScraper
 
-__all__ = ["STJScraper", "TSTScraper"]
+__all__ = ["STJScraper", "TSTScraper", "CARFScraper"]

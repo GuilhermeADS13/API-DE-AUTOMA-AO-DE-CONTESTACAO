@@ -139,6 +139,18 @@ services:
       # Verificacao de citacoes (tarefa simples) fica em Haiku (rapido/barato).
       - CLAUDE_EXTRACAO_MODEL=${CLAUDE_EXTRACAO_MODEL:-claude-sonnet-5}
       - CLAUDE_VERIFICACAO_MODEL=${CLAUDE_VERIFICACAO_MODEL:-claude-haiku-4-5}
+      # PR33: roteamento dinamico de modelo no Gerador. Se CLAUDE_MODEL_SIMPLES
+      # estiver setado e diferente de CLAUDE_MODEL, casos simples usam o modelo
+      # economico e so os complexos sobem pro premium (CLAUDE_MODEL). Vazio =
+      # roteamento desligado (Gerador usa sempre CLAUDE_MODEL). Ative no .env:
+      #   CLAUDE_MODEL=claude-opus-5  +  CLAUDE_MODEL_SIMPLES=claude-sonnet-5
+      # Score >= ROUTE_OPUS_SCORE -> premium. Sinais: tema juridico complexo (+3),
+      # valor>=ALTO (+3), valor>=MEDIO (+1), pedidos>=8 (+2)/>=6 (+1),
+      # confianca<0.6 (+2), pontos_vulneraveis>=5 (+1).
+      - CLAUDE_MODEL_SIMPLES=${CLAUDE_MODEL_SIMPLES:-}
+      - ROUTE_OPUS_SCORE=${ROUTE_OPUS_SCORE:-3}
+      - ROUTE_VALOR_ALTO=${ROUTE_VALOR_ALTO:-100000}
+      - ROUTE_VALOR_MEDIO=${ROUTE_VALOR_MEDIO:-40000}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       - ANTHROPIC_VERSION=${ANTHROPIC_VERSION:-2023-06-01}
       - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-6000}
