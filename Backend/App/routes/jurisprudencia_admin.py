@@ -15,6 +15,7 @@ CRUD do PR23 trabalha por `id` (BIGSERIAL) — separado da chave de negocio.
 """
 
 import logging
+import threading
 
 from fastapi import (
     APIRouter,
@@ -323,17 +324,29 @@ class ScrapeLoteRequest(BaseModel):
     max_por_tema: int = Field(default=4, ge=1, le=20)
 
 
+# Guard contra ingestoes concorrentes (schedule + disparo manual sobrepostos).
+# O upsert e idempotente, entao concorrencia nao corrompe — so evita trabalho
+# de embedding redundante. Non-blocking: se ja roda, pula.
+_scrape_lock = threading.Lock()
+
+
 def _rodar_scrape_background(fonte: str, max_por_tema: int) -> None:
     """Roda a ingestao em background. Excecoes ficam nos logs (nao ha response)."""
     from App.services.jurisprudencia_ingest import FONTES, ingerir_lote
 
-    fontes = sorted(FONTES) if fonte == "todas" else [fonte]
-    for f in fontes:
-        try:
-            stats = ingerir_lote(f, max_por_tema=max_por_tema)
-            logger.info("Scrape agendado concluido: %s", stats)
-        except Exception as err:  # noqa: BLE001 — background; so loga
-            logger.error("Scrape agendado falhou fonte=%s: %s", f, err)
+    if not _scrape_lock.acquire(blocking=False):
+        logger.warning("Scrape ja em andamento — ignorando disparo (fonte=%s).", fonte)
+        return
+    try:
+        fontes = sorted(FONTES) if fonte == "todas" else [fonte]
+        for f in fontes:
+            try:
+                stats = ingerir_lote(f, max_por_tema=max_por_tema)
+                logger.info("Scrape agendado concluido: %s", stats)
+            except Exception as err:  # noqa: BLE001 — background; so loga
+                logger.error("Scrape agendado falhou fonte=%s: %s", f, err)
+    finally:
+        _scrape_lock.release()
 
 
 @router.post("/admin/jurisprudencia/scrape", status_code=status.HTTP_202_ACCEPTED)

@@ -147,8 +147,9 @@ class CARFScraper:
         """Mapeia 1 doc Solr do CARF pro shape padrao do projeto."""
         ementa = self._campo(doc.get("ementa_s")).strip()
         # numero citavel do acordao (ex: 9101-002.402); fallback pro processo
-        numero = self._campo(doc.get("numero_decisao_s")).strip() \
-            or self._campo(doc.get("numero_processo_s")).strip()
+        num_decisao = self._campo(doc.get("numero_decisao_s")).strip()
+        num_processo = self._campo(doc.get("numero_processo_s")).strip()
+        numero = num_decisao or num_processo
         if not ementa or not numero:
             return None
 
@@ -163,7 +164,12 @@ class CARFScraper:
         turma = self._campo(doc.get("turma_s"))
         orgao = " - ".join(p for p in (secao, turma) if p) or None
 
-        processo = self._campo(doc.get("numero_processo_s")).strip() or None
+        # fonte_url aponta pro acordao especifico (busca Solr pelo campo/numero
+        # que identifica este registro), nao pro portal generico.
+        if num_decisao:
+            fonte_url = self._fonte_url("numero_decisao_s", num_decisao)
+        else:
+            fonte_url = self._fonte_url("numero_processo_s", num_processo)
 
         return {
             "tribunal": self.TRIBUNAL,
@@ -173,12 +179,18 @@ class CARFScraper:
             "data_julgamento": data_iso,
             "ementa": ementa,
             "tese_firmada": None,  # a ementa_s do CARF ja traz assunto + tese
-            "fonte_url": self.PORTAL_URL,
+            "fonte_url": fonte_url,
             "peso_relevancia_sugerido": peso,
             # extras informativos (nao usados pelo upsert)
             "orgao_judicante": orgao,
-            "numero_processo_administrativo": processo,
+            "numero_processo_administrativo": num_processo or None,
         }
+
+    @classmethod
+    def _fonte_url(cls, campo: str, valor: str) -> str:
+        """Link de busca Solr escopado no acordao (campo:\"valor\")."""
+        q = requests.utils.quote(f'{campo}:"{valor}"')
+        return f"{cls.PORTAL_URL}?q={q}"
 
     @staticmethod
     def _campo(v: Any) -> str:

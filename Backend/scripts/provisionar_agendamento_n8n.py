@@ -44,7 +44,8 @@ def _le_env(path: Path, chave: str) -> str:
     return ""
 
 
-def _api(method: str, path: str, api_key: str, body: dict | None = None) -> dict:
+def _api(method: str, path: str, api_key: str, body: dict | None = None,
+         *, tolerante: bool = False) -> dict:
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
         N8N_URL + path, data=data, method=method,
@@ -55,6 +56,9 @@ def _api(method: str, path: str, api_key: str, body: dict | None = None) -> dict
             return json.loads(r.read().decode() or "{}")
     except urllib.error.HTTPError as e:
         detalhe = e.read().decode()[:200]
+        if tolerante:  # ex: delete de credential antiga nao deve abortar
+            print(f"  (n8n API {method} {path} -> {e.code}: {detalhe})")
+            return {}
         raise SystemExit(f"n8n API {method} {path} -> {e.code}: {detalhe}")
 
 
@@ -70,7 +74,19 @@ def main() -> int:
 
     print(f"n8n={N8N_URL} | token={token[:8]}... | api_key={api_key[:8]}...")
 
-    # 1) credential
+    # 1) acha o workflow existente (por nome) e captura a credential que ele
+    #    referencia hoje — pra deletar no fim e nao acumular credentials orfas.
+    existentes = _api("GET", "/api/v1/workflows?limit=100", api_key).get("data", [])
+    alvo = next((w for w in existentes if w.get("name") == WF_NAME), None)
+    cred_antiga = None
+    if alvo:
+        detalhe = _api("GET", f"/api/v1/workflows/{alvo['id']}", api_key)
+        for node in detalhe.get("nodes", []):
+            ref = (node.get("credentials") or {}).get("httpHeaderAuth") or {}
+            if ref.get("id"):
+                cred_antiga = ref["id"]
+
+    # 2) cria a credential nova
     cred = _api("POST", "/api/v1/credentials", api_key, {
         "name": CRED_NAME,
         "type": "httpHeaderAuth",
@@ -79,7 +95,7 @@ def main() -> int:
     cred_id = cred["id"]
     print(f"credential criada: id={cred_id}")
 
-    # 2) carrega workflow e injeta a credential no node HTTP Request
+    # 3) carrega workflow e injeta a credential nova no node HTTP Request
     wf = json.loads(WF_JSON.read_text(encoding="utf-8"))
     n_http = 0
     for node in wf.get("nodes", []):
@@ -96,9 +112,7 @@ def main() -> int:
         "settings": wf.get("settings", {"executionOrder": "v1"}),
     }
 
-    # 3) cria ou atualiza (find-by-name) + ativa
-    existentes = _api("GET", "/api/v1/workflows?limit=100", api_key).get("data", [])
-    alvo = next((w for w in existentes if w.get("name") == payload["name"]), None)
+    # 4) cria ou atualiza + ativa
     if alvo:
         wf_id = alvo["id"]
         _api("PUT", f"/api/v1/workflows/{wf_id}", api_key, payload)
@@ -110,6 +124,12 @@ def main() -> int:
 
     act = _api("POST", f"/api/v1/workflows/{wf_id}/activate", api_key, {})
     print(f"workflow ativo = {act.get('active')}")
+
+    # 5) remove a credential antiga (agora nao-referenciada) — idempotente
+    if cred_antiga and cred_antiga != cred_id:
+        _api("DELETE", f"/api/v1/credentials/{cred_antiga}", api_key, tolerante=True)
+        print(f"credential antiga removida: id={cred_antiga}")
+
     print("OK: agendamento provisionado.")
     return 0
 

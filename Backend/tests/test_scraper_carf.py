@@ -50,10 +50,21 @@ def test_parse_mapeia_campos_do_primeiro():
     assert a["data_julgamento"][4] == "-" and a["data_julgamento"][7] == "-"
     # CARF nao tem tese distinta
     assert a["tese_firmada"] is None
-    # fonte_url aponta pro portal do CARF
+    # fonte_url escopado no acordao especifico (busca pelo numero), nao portal generico
     assert "acordaos.economia.gov.br" in a["fonte_url"]
+    assert "numero_decisao_s" in a["fonte_url"]
     # extra informativo: processo administrativo preservado
     assert "numero_processo_administrativo" in a
+
+
+def test_fonte_url_cai_pro_processo_quando_sem_decisao():
+    from App.services.scrapers.carf import CARFScraper
+
+    resp = {"response": {"docs": [
+        {"numero_processo_s": "10925.900663/2006-51", "ementa_s": "ementa x"},
+    ]}}
+    a = CARFScraper()._parse_resposta(resp)[0]
+    assert "numero_processo_s" in a["fonte_url"]
 
 
 def test_title_case_respeita_preposicoes():
