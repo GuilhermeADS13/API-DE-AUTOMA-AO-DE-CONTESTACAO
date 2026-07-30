@@ -21,6 +21,16 @@
               ],
               "triggerAtHour": 3,
               "triggerAtMinute": 0
+            },
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1,
+                5
+              ],
+              "triggerAtHour": 15,
+              "triggerAtMinute": 0
             }
           ]
         }
