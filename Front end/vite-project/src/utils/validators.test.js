@@ -211,7 +211,7 @@ describe("validateAuthField", () => {
     });
 
     it("valida formato invalido", () => {
-      expect(validateAuthField("email", "invalido", "login")).toContain("valido");
+      expect(validateAuthField("email", "invalido", "login")).toContain("válido");
     });
 
     it("aceita email valido", () => {

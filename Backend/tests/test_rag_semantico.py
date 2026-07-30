@@ -683,11 +683,12 @@ class TestClassificadorAreaJuridica:
             ("Beneficio Assistencial - Lei 8213", "previdenciario"),
             ("Indenizacao por Danos Materiais - CPC ", "civel"),
             ("Acao Civel - Responsabilidade Civil", "civel"),
+            ("Acao Tributaria", "tributario"),
+            ("Execucao Fiscal - Debito de ICMS", "tributario"),
             # Edge cases: nao bate em nenhuma keyword -> None
             ("", None),
             (None, None),
             ("Foo bar baz", None),
-            ("Acao Tributaria", None),  # nao mapeado
         ],
     )
     def test_classifica_corretamente(self, tipo_acao, esperado):
@@ -699,7 +700,7 @@ class TestClassificadorAreaJuridica:
         from App.database import AREAS_JURIDICAS_CANONICAS
 
         assert AREAS_JURIDICAS_CANONICAS == frozenset({
-            "trabalhista", "consumidor", "bancario", "previdenciario", "civel",
+            "trabalhista", "tributario", "consumidor", "bancario", "previdenciario", "civel",
         })
 
 
