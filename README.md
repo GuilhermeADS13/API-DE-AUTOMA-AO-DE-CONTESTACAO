@@ -24,10 +24,12 @@ Sistema web fullstack para geração automatizada de contestações trabalhistas
 
 ## Funcionalidades
 
-- **Upload de petição inicial** (PDF ou DOCX, até 20MB). Sistema extrai dados estruturados via Claude Sonnet 4.6.
+- **Upload de petição inicial** (PDF ou DOCX, até 20MB). Sistema extrai dados estruturados via Claude Sonnet 5.
 - **OCR fallback** automático pra PDFs digitalizados (Tesseract + Poppler) — Súmula 338 TST não fica de fora.
-- **RAG semântico em defesas anteriores** do próprio escritório (pgvector + sentence-transformers MiniLM-L12, 384 dims). A IA copia tese central, preliminares e estratégia dos exemplares aprovados.
-- **Geração da minuta** com Claude Sonnet 4.6 — 7 preliminares trabalhistas obrigatórias (A–G), mérito subseções (II.A, II.B…), litigância de má-fé, danos morais, autenticidade, pedidos.
+- **RAG híbrido em defesas anteriores** do próprio escritório (BM25 lexical + pgvector semântico com Reciprocal Rank Fusion; sentence-transformers MiniLM-L12, 384 dims). A IA copia tese central, preliminares e estratégia dos exemplares aprovados.
+- **RAG de jurisprudência real** — base de acórdãos coletados de fontes públicas: **TST** (trabalhista) e **CARF** (tributário), sem Cloudflare. Alimenta a minuta com jurisprudência aplicável ao caso. Scrapers em `Backend/App/services/scrapers/` + ingestão em lote agendada.
+- **Roteamento de modelo por complexidade** — o Gerador escolhe **Claude Opus 5** (casos complexos: tema jurídico intrincado, valor alto, muitos pedidos) ou **Sonnet 5** (rotineiros) por um score, cortando custo sem perder qualidade onde importa. O custo estimado por peça é *model-aware*.
+- **Geração da minuta** — 7 preliminares trabalhistas obrigatórias (A–G), mérito subseções (II.A, II.B…), litigância de má-fé, danos morais, autenticidade, pedidos.
 - **Self-correction de citações** (Claude Haiku 4.5) — checa cada Súmula/artigo/jurisprudência citado contra a base legal vigente e marca incertos.
 - **Detecção de lacunas factuais** — quando a petição não traz fato necessário (data, salário, jornada), a IA registra em `riscos[]` em vez de inventar.
 - **Builder DOCX adaptativo** — preserva fonte, espaçamento e cabeçalho do modelo base do escritório. Default Arial 12pt + line-spacing 1.15 (alinhado ao padrão Word "Normal").
@@ -36,6 +38,8 @@ Sistema web fullstack para geração automatizada de contestações trabalhistas
 - **Dashboard com histórico** — cards de status, filtros, ações por peça (Baixar DOCX, Baixar PDF, Excluir).
 - **Revisão Humana (HiL)** — quando a confiança da extração fica abaixo de 0.7, o sistema abre modal pro advogado corrigir antes de gerar a minuta.
 - **Feedback loop** — advogado marca peça como útil/não-útil; coordenação curadora promove a `contestacoes_exemplares` (vira referência pro RAG).
+- **Painel admin de jurisprudência** (restrito a `ADMIN_EMAILS`) — CRUD de acórdãos paradigma + ingestão manual das fontes (TST/CARF).
+- **Agendamento autônomo** — workflow n8n dispara o scrape de jurisprudência periodicamente (Dom 03h + Seg/Sex 15h) pra manter a base atualizada sem intervenção. Também sob demanda via skill `/executar-agendamento`. Não consome token da Anthropic (scrape + embedding local).
 - **Cadastro e login** via Supabase Auth (e-mail/senha + OAuth social).
 - **Canal de suporte** com protocolo automático.
 
@@ -44,21 +48,22 @@ Sistema web fullstack para geração automatizada de contestações trabalhistas
 ## Arquitetura
 
 ```text
-┌──────────────────┐      ┌────────────────────┐      ┌──────────────────────┐
-│    Frontend       │      │     Backend         │      │      n8n (Docker)      │
-│  React 19 + Vite  │─────▶│  FastAPI + Python   │─────▶│  3 workflows ativos    │
-│  Bootstrap 5      │ HTTP │  python-docx        │ POST │   ├ contestacao-claude  │
-│  Supabase Auth    │◀─────│  pdf2image+OCR      │ JSON │   ├ contestar-peticao   │
-│                   │      │  LibreOffice→PDF    │      │   └ editar-contestacao │
-└──────────────────┘      └────────────────────┘      └──────────┬─────────────┘
-                                    │                            │
-                                    │                ┌───────────▼─────────────┐
-                                    │                │   Claude API (Anthropic) │
-                                    │                │   - sonnet-4-6 (extr+ger)│
-                                    │                │   - haiku-4-5 (verif)    │
-                                    │                └──────────────────────────┘
-                                    │
-                          ┌─────────▼──────────┐
+┌──────────────────┐      ┌────────────────────┐      ┌──────────────────────────┐
+│    Frontend       │      │     Backend         │      │       n8n (Docker)        │
+│  React 19 + Vite  │─────▶│  FastAPI + Python   │─────▶│   4 workflows ativos       │
+│  Bootstrap 5      │ HTTP │  python-docx        │ POST │    ├ contestacao-claude    │
+│  Supabase Auth    │◀─────│  pdf2image+OCR      │ JSON │    ├ contestar-peticao     │
+│                   │      │  LibreOffice→PDF    │      │    ├ editar-contestacao    │
+└──────────────────┘      └─────────┬──────────┘      │    └ scrape-agendado (cron)│
+                                    │                  └──────────┬────────────────┘
+                                    │                             │
+                    ┌───────────────┴──────┐          ┌───────────▼─────────────┐
+                    │  Scrapers (públicos)  │          │   Claude API (Anthropic) │
+                    │  TST (trabalhista)    │          │  - opus-5/sonnet-5 (ger) │
+                    │  CARF (tributário)    │          │  - sonnet-5 (extr)       │
+                    └───────────┬──────────┘          │  - haiku-4-5 (verif)     │
+                                │                       └──────────────────────────┘
+                          ┌─────▼──────────────┐
                           │  Supabase Postgres │
                           │  + pgvector 0.8    │
                           │  + RLS policies    │
@@ -79,17 +84,19 @@ Sistema web fullstack para geração automatizada de contestações trabalhistas
                                             │
                      ┌──────────────────────┘
                      ▼
-4. Claude Extrator (Sonnet 4.6, max_tokens 8000) → dados_extraidos + confianca
+4. Claude Extrator (Sonnet 5, max_tokens 8000) → dados_extraidos + confianca
                      │
                      ▼ se confianca >= 0.7
-5. RAG no Supabase → busca top-3 defesas similares (cosine via pgvector)
+5. RAG no Supabase → defesas similares (RRF: BM25 + pgvector) + legislação + jurisprudência (TST/CARF)
                      │
                      ▼
-6. Claude Gerador (Sonnet 4.6, max_tokens 16000) → minuta JSON
+6. Claude Gerador → minuta JSON (roteamento: Opus 5 se complexo, senão Sonnet 5; max_tokens 16000)
+   - Score de complexidade (tema jurídico, valor da causa, nº de pedidos, confiança) decide o modelo
    - SYSTEM_PROMPT com 100+ regras (preliminares A-G, hierarquia FORMA/TESE, lacunas factuais)
    - Cache ephemeral do SYSTEM + modelo_base (-3k tokens em calls subsequentes)
    - Retry com backoff em 429/529/500 (socket abort)
-   - JSON repair heurístico se output tiver aspas duplas internas
+   - `temperature` omitido pros modelos 5 (Claude 5 rejeita o parâmetro); JSON repair heurístico
+   - engine_ia.roteamento = {modelo_escolhido, score, motivos} + custo_estimado_usd model-aware
                      │
                      ▼
 7. Self-Correction (Haiku 4.5) → cita_incertas[] + cita_verificadas[]
@@ -104,7 +111,7 @@ Sistema web fullstack para geração automatizada de contestações trabalhistas
 10. Resposta: {arquivo_editado_base64, nome.pdf, riscos[], citacoes_incertas[]}
 ```
 
-Tempo médio: **~5–6 min** end-to-end. Custo médio: **$0,25** por peça (5–7 mil tokens output Sonnet + 11k cache create + Haiku verify).
+Tempo médio: **~2–6 min** end-to-end (mais rápido em Sonnet, mais lento em Opus). Custo por peça depende do roteamento: **~US$ 0,16** em Sonnet 5 (caso rotineiro) a **~US$ 0,78** em Opus 5 (caso complexo). O agendamento de scrape **não** consome token (scrape público + embedding local).
 
 ---
 
@@ -135,6 +142,11 @@ API-CONTESTACAO/
 │   │   │   ├── edicao.py                    # POST /editar-contestacao (edição cirúrgica DOCX)
 │   │   │   ├── feedback.py                  # POST /feedback + /admin/exemplares
 │   │   │   ├── rag.py                       # POST /rag/defesas-similares
+│   │   │   ├── legislacao.py                # base de legislação curada (fluxo RAG)
+│   │   │   ├── jurisprudencia.py            # POST /jurisprudencia/buscar (busca na base de acórdãos)
+│   │   │   ├── jurisprudencia_admin.py      # CRUD admin de acórdãos + POST /admin/jurisprudencia/scrape
+│   │   │   ├── datajud.py                   # POST /datajud/validar (CNJ)
+│   │   │   ├── captcha.py                   # cascade CAPTCHA (CRNN → cookies → notificação humana)
 │   │   │   ├── usuario.py                   # cadastro/login/logout/sessao
 │   │   │   └── suporte.py                   # POST /suporte/contato
 │   │   └── services/
@@ -144,6 +156,11 @@ API-CONTESTACAO/
 │   │       ├── docx_editor.py               # substituição cirúrgica preservando runs
 │   │       ├── diff_minuta.py               # diff entre minuta IA e edição humana
 │   │       ├── embedding_service.py         # sentence-transformers MiniLM-L12 (384d)
+│   │       ├── jurisprudencia_ingest.py     # ingerir_lote(fonte) — coleta+embedding+upsert (TST/CARF)
+│   │       ├── scrapers/                    # scrapers de jurisprudência pública
+│   │       │   ├── tst.py                   # TST (trabalhista) — API REST, sem Cloudflare
+│   │       │   ├── carf.py                  # CARF (tributário) — Solr público
+│   │       │   └── stj.py                   # STJ — bloqueado por Cloudflare Turnstile (documentado)
 │   │       ├── pdf_converter.py             # libreoffice --headless --convert-to pdf
 │   │       ├── peticao_extractor.py         # pypdf + Tesseract fallback OCR
 │   │       ├── auth_service.py              # bcrypt password hash
@@ -151,7 +168,8 @@ API-CONTESTACAO/
 │   ├── migrations/                          # SQL versionado (auditoria DB)
 │   │   ├── README.md                        # como reaplicar via MCP/CLI
 │   │   └── 2026060416*.sql                  # 4 migrations: RLS + index + revoke
-│   └── tests/                               # 30 arquivos pytest (12k+ LOC, 269 testes)
+│   ├── scripts/                             # scrape_jurisprudencia_lote.py, provisionar_agendamento_n8n.py, ...
+│   └── tests/                               # 39 arquivos pytest (~469 testes)
 │
 ├── Front end/vite-project/
 │   ├── package.json
@@ -176,8 +194,9 @@ API-CONTESTACAO/
 │
 ├── docs/
 │   ├── n8n_workflow_contestacao_claude.json       # fluxo manual
-│   ├── n8n_workflow_contestar_por_peticao.json    # fluxo principal (RAG + legislação)
+│   ├── n8n_workflow_contestar_por_peticao.json    # fluxo principal (RAG + legislação + jurisprudência)
 │   ├── n8n_workflow_editar_contestacao.json       # edição cirúrgica
+│   ├── n8n_workflow_scrape_agendado.json          # agendamento do scrape (Schedule → HTTP → backend)
 │   ├── AGENTE_IA_AUTOJURI.md                # spec do agente
 │   ├── OPERACOES_N8N.md                     # admin REST API n8n
 │   ├── CONTEXTO_PARA_CLAUDE.md              # contexto pro Claude Code
@@ -232,10 +251,11 @@ API-CONTESTACAO/
 
 | Componente | Função |
 |---|---|
-| Supabase PostgreSQL + pgvector 0.8 | DB + vector search |
-| n8n 2.17 (Docker) | Orquestrador (3 workflows ativos) |
+| Supabase PostgreSQL + pgvector 0.8 | DB + vector search (defesas + jurisprudência) |
+| n8n 2.17 (Docker) | Orquestrador (4 workflows ativos) |
 | LibreOffice 25.2 (no container backend) | DOCX → PDF |
-| Claude API (Anthropic) | Sonnet 4.6 (extr+ger) + Haiku 4.5 (verif) |
+| Claude API (Anthropic) | Opus 5 / Sonnet 5 (gerador, roteado) · Sonnet 5 (extrator) · Haiku 4.5 (verif) |
+| Fontes de jurisprudência | TST (API REST) · CARF (Solr) — públicas, sem Cloudflare |
 | Tesseract OCR + Poppler | PDF digitalizado |
 
 ---
@@ -276,6 +296,23 @@ Todas rotas sob `/api`. Rate limits via `slowapi` (IP-based).
 | Método | Endpoint | Descrição | Rate limit | Auth |
 |---|---|---|---|---|
 | POST | `/rag/defesas-similares` | Busca semântica top-K em `contestacoes_exemplares` | 30/min | ✅ |
+
+### Jurisprudência (`jurisprudencia.py` + `jurisprudencia_admin.py`)
+| Método | Endpoint | Descrição | Rate limit | Auth |
+|---|---|---|---|---|
+| POST | `/jurisprudencia/buscar` | Busca híbrida na base de acórdãos (TST trabalhista / CARF tributário) | 60/min | ✅ |
+| POST | `/admin/jurisprudencia/criar` | Cadastra/atualiza acórdão paradigma (upsert por tribunal+número) | 30/min | ✅ admin |
+| GET | `/admin/jurisprudencia/listar` | Lista paginada (filtros por tribunal/área/busca) | 60/min | ✅ admin |
+| GET / PATCH / DELETE | `/admin/jurisprudencia/{id}` | Detalhe / edição / remoção por id | 30–60/min | ✅ admin |
+| POST | `/admin/jurisprudencia/scrape` | Dispara ingestão em lote (TST/CARF) em background → 202 (alvo do agendamento) | 6/hora | ✅ admin |
+
+### Legislação · DataJud · CAPTCHA
+| Método | Endpoint | Descrição | Rate limit | Auth |
+|---|---|---|---|---|
+| POST | `/legislacao/buscar` | Base de legislação curada (fluxo RAG) | 60/min | ✅ |
+| POST | `/datajud/validar` | Valida processo na API pública do CNJ (DataJud) | 60/min | ✅ |
+| GET | `/datajud/tribunais` | Lista tribunais suportados | 60/min | ✅ |
+| POST/GET | `/captcha/solve · /status · /answer · /pendentes` | Cascade de resolução de CAPTCHA (scraping) | 30–120/min | interno |
 
 ### Usuários (`Backend/App/routes/usuario.py`)
 | Método | Endpoint | Descrição | Rate limit | Auth |
@@ -393,9 +430,14 @@ Veja [`.env.example`](.env.example) pra lista completa. Categorias:
 | Variável | Descrição |
 |---|---|
 | `ANTHROPIC_API_KEY` | Chave da API Anthropic |
-| `CLAUDE_MODEL` | Modelo principal do gerador (default `claude-sonnet-4-6`) |
-| `CLAUDE_EXTRACAO_MODEL` | Modelo do extrator (default `claude-sonnet-4-6`) |
+| `CLAUDE_MODEL` | Modelo **premium** do gerador (default `claude-sonnet-5`; use `claude-opus-5` pra máxima qualidade) |
+| `CLAUDE_MODEL_SIMPLES` | Modelo **econômico** do gerador (ex: `claude-sonnet-5`). Vazio = roteamento desligado (usa sempre `CLAUDE_MODEL`) |
+| `CLAUDE_EXTRACAO_MODEL` | Modelo do extrator (default `claude-sonnet-5`) |
 | `CLAUDE_VERIFICACAO_MODEL` | Modelo do self-correction (default `claude-haiku-4-5`) |
+| `ROUTE_OPUS_SCORE` | Limiar do score de complexidade pra subir pro modelo premium (default `3`) |
+| `ROUTE_VALOR_ALTO` / `ROUTE_VALOR_MEDIO` | Faixas de valor da causa no score de roteamento (default `100000` / `40000`) |
+
+> **Nota Claude 5:** os modelos da família 5 (`opus-5`, `sonnet-5`) rejeitam o parâmetro `temperature` — o workflow o omite automaticamente pra esses modelos (mantém pro Haiku 4.5). O custo por peça em `engine_ia.custo_estimado_usd` é calculado por modelo (não hardcoded).
 
 ### Supabase
 | Variável | Descrição |
@@ -456,9 +498,9 @@ npm run test:coverage             # relatório de cobertura
 ```bash
 cd Backend
 pip install -r requirements-dev.txt
-pytest -v                                          # ~269 testes
+pytest -v                                          # ~469 testes
 pytest tests/test_security_audit.py -v             # 31 vetores de ataque
-pytest tests/test_routes_contestacao_peticao.py -v # rotas do fluxo principal
+pytest tests/test_scraper_carf.py tests/test_scraper_tst.py -v  # scrapers de jurisprudência
 ```
 
 Testes principais:
@@ -472,6 +514,8 @@ Testes principais:
 | `test_n8n_retry.py` | Retry exponencial com 429/529/500 |
 | `test_n8n_schema.py` | `extra="ignore"` no Pydantic resposta |
 | `test_rag_semantico.py` | pgvector cosine + threshold + fallback TF-IDF |
+| `test_scraper_tst.py` / `test_scraper_carf.py` | Parsers dos scrapers de jurisprudência (fixtures reais TST/CARF) |
+| `test_jurisprudencia_admin.py` | CRUD admin + endpoint `/scrape` (auth 401, 202, 422) |
 | `test_docx_editor.py` | Substituição cirúrgica preserva runs |
 | `test_routes_contestacao_peticao.py` | Fluxo completo upload → extração → geração |
 | `test_security_headers.py` | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, etc. |
@@ -504,6 +548,24 @@ Testes principais:
 - `/ligarserver` (skill Claude Code) — Docker + rebuild backend + Vite em background.
 - `/desligarserver` — Vite kill + `docker compose down` preservando volumes.
 - `/testar-servers` — health-check completo (12 checks: Docker, containers, portas, REST APIs, Supabase, Anthropic, MCP).
+- `/executar-agendamento` — dispara na hora o scrape de jurisprudência (TST + CARF), sem esperar o cron. Não gasta token.
+
+### Jurisprudência — scrape e agendamento
+
+Ingestão em lote (roda dentro do container, não gasta token — scrape público + embedding local):
+
+```bash
+# ambas as fontes (trabalhista + tributário), sob demanda
+docker exec autojuri_backend python scripts/scrape_jurisprudencia_lote.py --fonte=todas
+# só uma área
+docker exec autojuri_backend python scripts/scrape_jurisprudencia_lote.py --fonte=tst   # ou carf
+```
+
+O agendamento automático (workflow n8n `scrape-agendado`) dispara **Dom 03h + Seg/Sex 15h** (TZ America/Sao_Paulo) via `POST /api/admin/jurisprudencia/scrape`, autenticado por credential `httpHeaderAuth`. Como o n8n roda local, o gatilho só ocorre com o PC ligado no horário (não há catch-up de execução perdida). Se o volume do n8n for recriado, reprovisione:
+
+```bash
+cd Backend && .venv/Scripts/python.exe scripts/provisionar_agendamento_n8n.py   # recria credential + re-vincula + ativa
+```
 
 ### Administrar n8n via REST
 ```powershell
