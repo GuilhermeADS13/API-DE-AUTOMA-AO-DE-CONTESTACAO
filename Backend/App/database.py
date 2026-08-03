@@ -928,9 +928,15 @@ def salvar_feedback(
 
 
 def get_contestacoes_exemplares(tipo_acao: str) -> list[dict[str, Any]]:
-    """Retorna exemplares curados para o tipo_acao, ordenados por nota_qualidade DESC.
+    """Retorna os melhores exemplares curados como few-shot do estilo do escritorio.
 
     Usados pelo workflow n8n como few-shot examples no system prompt do agente Claude.
+
+    Matching: o `tipo_acao` extraido de uma peticao e texto livre (varia caso a caso),
+    entao um `WHERE tipo_acao = %s` exato quase nunca casava e o estilo curado nao
+    chegava ao Gerador. Agora retorna os top-3 por (match exato primeiro, depois
+    nota_qualidade): exemplares do mesmo tipo vem na frente, mas o estilo do
+    escritorio sempre alcanca a geracao mesmo sem match literal.
     """
     _ensure_db_initialized()
 
@@ -940,11 +946,10 @@ def get_contestacoes_exemplares(tipo_acao: str) -> list[dict[str, Any]]:
                 """
                 SELECT tipo_acao, tese_central, fundamentos_resumo, nota_qualidade
                 FROM contestacoes_exemplares
-                WHERE tipo_acao = %s
-                ORDER BY nota_qualidade DESC
+                ORDER BY (lower(tipo_acao) = lower(%s)) DESC, nota_qualidade DESC, id DESC
                 LIMIT 3
                 """,
-                (tipo_acao,),
+                (tipo_acao or "",),
             )
             rows = cursor.fetchall()
 
