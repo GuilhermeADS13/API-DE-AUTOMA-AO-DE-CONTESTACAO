@@ -394,16 +394,18 @@ async def contestar_por_peticao(
         peticao_bytes, payload.arquivo_peticao_nome, anexos, usuario_id
     )
 
-    # 2b. Opcao: OCR das provas da defesa e injecao como base factual para a IA.
+    # 2b. Opcao: OCR das provas da defesa -> campo separado `texto_provas`. Vai
+    # direto ao Gerador (que ancora as teses nos documentos com valores reais);
+    # o Extrator segue analisando so a peticao, sem poluicao.
+    texto_provas = ""
     if payload.ler_provas_ia and payload.arquivos_embedar:
         texto_provas = _texto_provas_para_ia(payload.arquivos_embedar, usuario_id)
-        if texto_provas:
-            texto_peticao = f"{texto_peticao}{texto_provas}"
 
     # 3-4. Texto do modelo base e payload para o n8n.
     texto_modelo_base = extrair_texto_modelo_base(payload.modelo_base_base64)
     payload_n8n = {
         "texto_peticao": texto_peticao,
+        "texto_provas": texto_provas,
         "modelo_base_texto": texto_modelo_base,
         "tipo_acao_hint": payload.tipo_acao_hint or "",
         "pontos_contestante": payload.pontos_contestante or "",
