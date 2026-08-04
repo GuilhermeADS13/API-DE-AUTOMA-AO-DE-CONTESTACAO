@@ -285,6 +285,8 @@ export default function App() {
   // Cada item: { file: File, tipo: 'folha_ponto'|'fgts'|'trct'|'laudo_pericial'|'contrato'|'ctps'|'print'|'outro' }
   const [embedFiles, setEmbedFiles] = useState([]);
   const [embedError, setEmbedError] = useState("");
+  // Opcao: deixar a IA LER as provas (OCR) alem de embeda-las no docx.
+  const [lerProvasIa, setLerProvasIa] = useState(true);
   // PR5 HiL: modal de revisao humana quando confianca da IA < 0.7.
   const [showRevisaoModal, setShowRevisaoModal] = useState(false);
   const [revisaoData, setRevisaoData] = useState(null); // { contestacao_id, dados_extraidos, dados_confianca, modelo_base_base64 }
@@ -1477,6 +1479,7 @@ export default function App() {
         pontos_contestante: pontosContestante.trim() || null,
         arquivos_anexos: anexosSerializados,
         arquivos_embedar: embedSerializados,
+        ler_provas_ia: lerProvasIa,
       };
 
       // Avisa o usuario se o payload eh grande (modelo .docx vira ~2-3MB
@@ -2098,6 +2101,8 @@ export default function App() {
           onAdicionarEmbed={handleAdicionarEmbed}
           onRemoverEmbed={handleRemoverEmbed}
           onChangeTipoEmbed={handleChangeTipoEmbed}
+          lerProvasIa={lerProvasIa}
+          onToggleLerProvasIa={setLerProvasIa}
         />
       )}
 

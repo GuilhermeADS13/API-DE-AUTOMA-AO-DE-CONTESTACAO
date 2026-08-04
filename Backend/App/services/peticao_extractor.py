@@ -39,11 +39,13 @@ logger = logging.getLogger(__name__)
 try:
     import pytesseract  # type: ignore
     from pdf2image import convert_from_bytes  # type: ignore
+    from PIL import Image  # type: ignore
 
     _OCR_LIBS_DISPONIVEIS = True
 except ImportError:
     pytesseract = None  # type: ignore
     convert_from_bytes = None  # type: ignore
+    Image = None  # type: ignore
     _OCR_LIBS_DISPONIVEIS = False
 
 # PR6: limite expandido. Claude Sonnet 4.6 tem 200k tokens de janela; 80k
@@ -62,6 +64,89 @@ OCR_LANG = os.getenv("OCR_LANG", "por")  # tesseract-ocr-por instalado no Docker
 # Limite de chars para considerar um PDF como "digitalizado" (texto curto =
 # pypdf nao conseguiu extrair, provavelmente eh imagem).
 PDF_OCR_FALLBACK_THRESHOLD = 200
+
+# ── OCR de documentos de PROVA da defesa (TRCT, ponto, FGTS, EPI, ASO...) ─────
+# O advogado sobe as provas (arquivos_embedar) para embeda-las no docx; com a
+# opcao `ler_provas_ia`, tambem rodamos OCR e injetamos o texto na entrada da
+# IA, dando base factual (valores, datas, jornada) para a defesa.
+OCR_PROVA_MAX_CHARS = int(os.getenv("OCR_PROVA_MAX_CHARS", "2500"))  # por documento
+OCR_PROVAS_MAX_TOTAL = int(os.getenv("OCR_PROVAS_MAX_TOTAL", "9000"))  # bloco todo
+_MIN_TEXTO_PROVA = 15  # abaixo disso a imagem e "pura" (foto sem texto) — pula
+
+_ROTULO_TIPO_PROVA = {
+    "trct": "TRCT (Termo de Rescisao)",
+    "fgts": "Extrato de FGTS",
+    "folha_ponto": "Cartao/Folha de Ponto",
+    "laudo_pericial": "Laudo Pericial",
+    "contrato": "Contrato de Trabalho",
+    "ctps": "CTPS",
+    "print": "Print/Comprovante",
+    "outro": "Documento",
+}
+
+
+def _ocr_imagem(conteudo: bytes) -> str:
+    """OCR de uma imagem (PNG/JPG) via Tesseract. '' se indisponivel/erro."""
+    if not (OCR_ENABLED and _OCR_LIBS_DISPONIVEIS and Image is not None):
+        return ""
+    try:
+        with Image.open(BytesIO(conteudo)) as img:
+            return pytesseract.image_to_string(img, lang=OCR_LANG) or ""
+    except Exception as err:  # PIL/Tesseract podem levantar varios tipos
+        logger.warning("OCR de imagem-prova falhou: %s", err)
+        return ""
+
+
+def ocr_documento_prova(conteudo: bytes, nome: str) -> str:
+    """Extrai texto de UM documento de prova (imagem direta ou PDF digitalizado)."""
+    nome_lower = (nome or "").lower().strip()
+    if nome_lower.endswith((".png", ".jpg", ".jpeg")):
+        texto = _ocr_imagem(conteudo)
+    elif nome_lower.endswith(".pdf"):
+        try:
+            texto = _extrair_pdf(conteudo)  # ja tem OCR fallback embutido
+        except Exception as err:
+            logger.warning("Extracao de PDF-prova falhou: %s", err)
+            texto = ""
+    else:
+        texto = ""
+    return _limpar_texto(texto)
+
+
+def consolidar_texto_provas(provas: list[dict]) -> str:
+    """Monta bloco rotulado com o texto OCR das provas da defesa.
+
+    `provas`: lista de {"nome": str, "conteudo": bytes, "tipo": str}. Retorna ''
+    se nenhuma prova produzir texto legivel (ex.: fotos puras).
+    """
+    if not provas:
+        return ""
+
+    blocos: list[str] = []
+    total = 0
+    for indice, prova in enumerate(provas, start=1):
+        texto = ocr_documento_prova(prova.get("conteudo") or b"", prova.get("nome") or "")
+        if len(texto.strip()) < _MIN_TEXTO_PROVA:
+            continue
+        texto = texto[:OCR_PROVA_MAX_CHARS].strip()
+        rotulo = _ROTULO_TIPO_PROVA.get(prova.get("tipo") or "outro", "Documento")
+        blocos.append(
+            f"--- DOC. {indice:02d} [{rotulo}] ({prova.get('nome') or 's/nome'}):\n{texto}"
+        )
+        total += len(texto)
+        if total >= OCR_PROVAS_MAX_TOTAL:
+            break
+
+    if not blocos:
+        return ""
+
+    return (
+        "\n\n===== DOCUMENTOS DE PROVA JUNTADOS PELA RECLAMADA (DEFESA) =====\n"
+        "Conteudo extraido por OCR dos documentos que a defesa juntou. Use estes "
+        "dados reais (valores, datas, jornada, saldos) para fundamentar a "
+        "contestacao e impugnar as alegacoes da inicial. NAO sao pedidos do autor.\n\n"
+        + "\n\n".join(blocos)
+    )
 
 # Marcadores de secoes que aparecem em peticoes brasileiras. Casamento
 # case-insensitive, ancorado em inicio de linha apos whitespace, com

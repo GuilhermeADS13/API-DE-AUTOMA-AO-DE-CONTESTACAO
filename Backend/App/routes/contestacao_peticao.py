@@ -59,6 +59,7 @@ from App.services.diff_minuta import diff_secoes, resumo_diff
 from App.services.n8n_service import N8NServiceError, enviar_para_n8n_peticao
 from App.services.peticao_extractor import (
     ExtracaoError,
+    consolidar_texto_provas,
     extrair_e_consolidar_textos,
     extrair_texto_modelo_base,
 )
@@ -134,6 +135,33 @@ def _decodificar_anexos(anexos) -> list[tuple[bytes, str]]:
         except (binascii.Error, ValueError):
             logger.warning("Anexo descartado por base64 invalido: %s", anexo.nome)
     return decodificados
+
+
+def _texto_provas_para_ia(arquivos_embedar, usuario_id: str) -> str:
+    """OCR das provas da defesa (arquivos_embedar) -> bloco de texto para a IA.
+
+    Tolerante a falhas: qualquer erro de decode/OCR e logado e nunca derruba a
+    geracao — as provas continuam sendo embedadas no docx normalmente.
+    """
+    provas: list[dict] = []
+    for embed in arquivos_embedar:
+        try:
+            provas.append(
+                {
+                    "nome": embed.nome,
+                    "tipo": embed.tipo,
+                    "conteudo": base64.b64decode(embed.base64),
+                }
+            )
+        except (binascii.Error, ValueError):
+            logger.warning("Prova descartada do OCR por base64 invalido: %s", embed.nome)
+    try:
+        return consolidar_texto_provas(provas)
+    except Exception as error:  # OCR nunca deve derrubar o fluxo principal
+        logger.warning(
+            "OCR das provas da defesa falhou usuario_id=%s erro=%s", usuario_id, error
+        )
+        return ""
 
 
 def _extrair_texto_peticao(
@@ -365,6 +393,12 @@ async def contestar_por_peticao(
     texto_peticao = _extrair_texto_peticao(
         peticao_bytes, payload.arquivo_peticao_nome, anexos, usuario_id
     )
+
+    # 2b. Opcao: OCR das provas da defesa e injecao como base factual para a IA.
+    if payload.ler_provas_ia and payload.arquivos_embedar:
+        texto_provas = _texto_provas_para_ia(payload.arquivos_embedar, usuario_id)
+        if texto_provas:
+            texto_peticao = f"{texto_peticao}{texto_provas}"
 
     # 3-4. Texto do modelo base e payload para o n8n.
     texto_modelo_base = extrair_texto_modelo_base(payload.modelo_base_base64)

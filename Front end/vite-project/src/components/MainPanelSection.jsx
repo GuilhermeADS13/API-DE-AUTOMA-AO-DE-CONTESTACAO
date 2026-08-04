@@ -69,6 +69,8 @@ export default function MainPanelSection({
   onAdicionarEmbed,
   onRemoverEmbed,
   onChangeTipoEmbed,
+  lerProvasIa = true,
+  onToggleLerProvasIa,
 }) {
   const fileInputRef = useRef(null);
   const peticaoInputRef = useRef(null);
@@ -416,6 +418,15 @@ export default function MainPanelSection({
                       >
                         Documentos que vão aparecer dentro da contestação como prova: FGTS, TRCT, folha de ponto, laudos, prints. Selecione o tipo de cada arquivo na lista.
                       </small>
+                      <Form.Check
+                        type="switch"
+                        id="ler-provas-ia"
+                        className="mb-2"
+                        checked={lerProvasIa}
+                        disabled={loading}
+                        onChange={(event) => onToggleLerProvasIa?.(event.target.checked)}
+                        label="Deixar a IA ler estes documentos (OCR) para extrair valores, datas e jornada e fundamentar a defesa"
+                      />
                       <div className="d-flex align-items-center gap-2 flex-wrap">
                         <Button
                           type="button"

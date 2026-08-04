@@ -189,6 +189,10 @@ class ContestacaoPorPeticao(BaseModel):
     # PR15: provas embedaveis visualmente no docx final (max 10).
     arquivos_embedar: list[ArquivoEmbedar] = Field(default_factory=list)
 
+    # Opcao: alem de embedar as provas no docx, rodar OCR nelas e injetar o
+    # texto na entrada da IA (base factual: valores/datas/jornada). Default on.
+    ler_provas_ia: bool = True
+
     @model_validator(mode="after")
     def validar_anexos_agregados(self):
         if len(self.arquivos_anexos) > MAX_ANEXOS:
