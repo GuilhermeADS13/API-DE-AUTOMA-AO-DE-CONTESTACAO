@@ -276,6 +276,8 @@ export default function App() {
   const [peticaoError, setPeticaoError] = useState("");
   const [modeloBaseFile, setModeloBaseFile] = useState(null);
   const [modeloBaseError, setModeloBaseError] = useState("");
+  // Salvar o modelo enviado como timbre padrao do escritorio (reuso futuro).
+  const [salvarModeloPadrao, setSalvarModeloPadrao] = useState(false);
   const [tipoAcaoHint, setTipoAcaoHint] = useState("");
   const [pontosContestante, setPontosContestante] = useState("");
   // PR5 Multi-documentos: lista de anexos opcionais (alem da peticao principal).
@@ -1480,6 +1482,7 @@ export default function App() {
         arquivos_anexos: anexosSerializados,
         arquivos_embedar: embedSerializados,
         ler_provas_ia: lerProvasIa,
+        salvar_como_modelo_padrao: salvarModeloPadrao,
       };
 
       // Avisa o usuario se o payload eh grande (modelo .docx vira ~2-3MB
@@ -2088,6 +2091,8 @@ export default function App() {
           modeloBaseError={modeloBaseError}
           onModeloBaseFileSelect={handleModeloBaseFileSelect}
           onRemoveModeloBaseFile={handleRemoveModeloBaseFile}
+          salvarModeloPadrao={salvarModeloPadrao}
+          onToggleSalvarModeloPadrao={setSalvarModeloPadrao}
           tipoAcaoHint={tipoAcaoHint}
           onTipoAcaoHintChange={(e) => setTipoAcaoHint(e.target.value)}
           pontosContestante={pontosContestante}

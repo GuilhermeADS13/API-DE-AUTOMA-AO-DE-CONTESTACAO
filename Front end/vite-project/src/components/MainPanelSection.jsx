@@ -51,6 +51,8 @@ export default function MainPanelSection({
   onPeticaoFileSelect,
   onRemovePeticaoFile,
   modeloBaseFile,
+  salvarModeloPadrao = false,
+  onToggleSalvarModeloPadrao,
   modeloBaseError,
   onModeloBaseFileSelect,
   onRemoveModeloBaseFile,
@@ -308,6 +310,17 @@ export default function MainPanelSection({
                             <XCircle /> Remover
                           </Button>
                         </div>
+                      )}
+                      {modeloBaseFile && (
+                        <Form.Check
+                          type="switch"
+                          id="salvar-modelo-padrao"
+                          className="mt-2"
+                          checked={salvarModeloPadrao}
+                          disabled={loading}
+                          onChange={(event) => onToggleSalvarModeloPadrao?.(event.target.checked)}
+                          label="Salvar este modelo como meu timbre padrão (reusar nas próximas gerações sem re-subir)"
+                        />
                       )}
                       {modeloBaseError && (
                         <div className="upload-feedback-error">{modeloBaseError}</div>

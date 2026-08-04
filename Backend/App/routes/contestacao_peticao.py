@@ -40,8 +40,10 @@ from App.database import (
     atualizar_contestacao_pos_revisao,
     get_contestacao,
     get_contestacao_para_download,
+    get_modelo_padrao,
     salvar_embedding,
     salvar_minuta_editada,
+    salvar_modelo_padrao,
     save_contestacao,
 )
 from App.limiter import limiter
@@ -162,6 +164,32 @@ def _texto_provas_para_ia(arquivos_embedar, usuario_id: str) -> str:
             "OCR das provas da defesa falhou usuario_id=%s erro=%s", usuario_id, error
         )
         return ""
+
+
+def _resolver_modelo(payload: ContestacaoPorPeticao, usuario_id: str) -> None:
+    """Resolve o modelo (timbre) efetivo, mutando payload.modelo_base_* in-place.
+
+    - Se um modelo foi enviado e `salvar_como_modelo_padrao`, grava como padrao.
+    - Se NENHUM modelo foi enviado, reaproveita o timbre padrao do usuario.
+    Tolerante a falha: qualquer erro cai no comportamento antigo (sem timbre).
+    """
+    try:
+        if payload.modelo_base_base64:
+            if payload.salvar_como_modelo_padrao:
+                salvar_modelo_padrao(
+                    usuario_id,
+                    payload.modelo_base_nome or "Timbre do escritorio",
+                    payload.modelo_base_base64,
+                )
+        else:
+            padrao = get_modelo_padrao(usuario_id)
+            if padrao:
+                payload.modelo_base_base64 = padrao["arquivo_b64"]
+                payload.modelo_base_nome = padrao["nome"]
+    except Exception as error:
+        logger.warning(
+            "Falha ao resolver modelo padrao usuario_id=%s erro=%s", usuario_id, error
+        )
 
 
 def _extrair_texto_peticao(
@@ -400,6 +428,10 @@ async def contestar_por_peticao(
     texto_provas = ""
     if payload.ler_provas_ia and payload.arquivos_embedar:
         texto_provas = _texto_provas_para_ia(payload.arquivos_embedar, usuario_id)
+
+    # 2c. Timbre: salva o modelo enviado como padrao (se pedido) ou reaproveita
+    # o timbre padrao do usuario quando nenhum modelo foi enviado.
+    _resolver_modelo(payload, usuario_id)
 
     # 3-4. Texto do modelo base e payload para o n8n.
     texto_modelo_base = extrair_texto_modelo_base(payload.modelo_base_base64)

@@ -193,6 +193,10 @@ class ContestacaoPorPeticao(BaseModel):
     # texto na entrada da IA (base factual: valores/datas/jornada). Default on.
     ler_provas_ia: bool = True
 
+    # Opcao: salvar o modelo (papel timbrado) enviado como padrao do usuario,
+    # pra reaproveitar nas proximas geracoes sem re-upload.
+    salvar_como_modelo_padrao: bool = False
+
     @model_validator(mode="after")
     def validar_anexos_agregados(self):
         if len(self.arquivos_anexos) > MAX_ANEXOS:

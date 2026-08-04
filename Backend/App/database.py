@@ -2089,6 +2089,70 @@ def salvar_exemplar(
     return int(inserted_id)
 
 
+def get_modelo_padrao(usuario_id: str) -> dict[str, Any] | None:
+    """Retorna o modelo (papel timbrado) padrao do usuario, ou None se nao houver.
+
+    Usado pela geracao por peticao: quando o advogado nao sobe um modelo na hora,
+    reaproveita o timbre padrao salvo em modelos_escritorio.
+    """
+    if not usuario_id:
+        return None
+    _ensure_db_initialized()
+
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT nome, arquivo_b64
+                FROM modelos_escritorio
+                WHERE usuario_id = %s AND is_default
+                ORDER BY atualizado_em DESC
+                LIMIT 1
+                """,
+                (usuario_id,),
+            )
+            row = cursor.fetchone()
+
+    if row is None:
+        return None
+    return {"nome": row[0], "arquivo_b64": row[1]}
+
+
+def salvar_modelo_padrao(usuario_id: str, nome: str, arquivo_b64: str) -> int:
+    """Salva/atualiza o modelo padrao (timbre) do usuario. Retorna o id.
+
+    Garante um unico default por usuario: desmarca os anteriores e insere o novo
+    como default (o indice unico parcial ux_modelos_default_por_usuario tambem
+    protege contra corrida).
+    """
+    if not (usuario_id and nome and arquivo_b64):
+        raise ValueError("usuario_id, nome e arquivo_b64 sao obrigatorios.")
+    _ensure_db_initialized()
+
+    with _get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE modelos_escritorio SET is_default = false, atualizado_em = now() "
+                "WHERE usuario_id = %s AND is_default",
+                (usuario_id,),
+            )
+            cursor.execute(
+                """
+                INSERT INTO modelos_escritorio (usuario_id, nome, arquivo_b64, is_default)
+                VALUES (%s, %s, %s, true)
+                RETURNING id
+                """,
+                (usuario_id, nome, arquivo_b64),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                raise RuntimeError("Falha ao salvar modelo padrao.")
+            novo_id = row[0]
+        connection.commit()
+
+    return int(novo_id)
+
+
 # ── PR9 P1.2 — CRUD da tabela `configuracoes` ────────────────────────────────
 
 

@@ -866,7 +866,7 @@ def _add_para_simples(
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     elif alinhamento == "justify":
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    _run(p, texto, bold=negrito)
+    _render_inline_markdown(p, texto, base_bold=negrito)
 
 
 def _add_heading(doc: Any, texto: str, *, nivel: int) -> None:
@@ -1203,11 +1203,15 @@ def _tipograficar_aspas(texto: str) -> str:
     return "".join(out)
 
 
-def _render_inline_markdown(p: Any, texto: str) -> None:
+def _render_inline_markdown(
+    p: Any, texto: str, *, base_bold: bool = False, base_underline: bool = False
+) -> None:
     """Renderiza **bold** e __underline__ inline num paragrafo existente.
 
     Processa o texto sequencialmente: cada match de **...** vira run em
-    negrito, __...__ vira run sublinhado, resto fica como texto plano.
+    negrito, __...__ vira run sublinhado, resto herda base_bold/base_underline.
+    `base_bold`/`base_underline` aplicam formatacao ao texto inteiro (ex.:
+    enderecamento em negrito) sem deixar os marcadores '**' aparecerem crus.
     Aspas planas sao convertidas em tipograficas curvas (estilo escritorio).
     """
     texto = _tipograficar_aspas(texto)
@@ -1216,11 +1220,11 @@ def _render_inline_markdown(p: Any, texto: str) -> None:
     pos = 0
     for m in _RE_COMBO.finditer(texto):
         if m.start() > pos:
-            _run(p, texto[pos:m.start()])
+            _run(p, texto[pos:m.start()], bold=base_bold, underline=base_underline)
         if m.group(1) is not None:  # **bold**
-            _run(p, m.group(1), bold=True)
+            _run(p, m.group(1), bold=True, underline=base_underline)
         else:  # __underline__
             _run(p, m.group(2), bold=True, underline=True)
         pos = m.end()
     if pos < len(texto):
-        _run(p, texto[pos:])
+        _run(p, texto[pos:], bold=base_bold, underline=base_underline)
