@@ -201,8 +201,31 @@ services:
       retries: 5
       start_period: 20s
 
+  # ── Frontend Vite (dev server em container) ──────────────────────────────
+  # Sobe junto com o resto (docker compose up), sem `npm run dev` a parte.
+  # O NAVEGADOR roda no host e fala com o backend em http://localhost:8000
+  # (porta publicada), por isso o front usa localhost (nao o nome do servico).
+  # As demais VITE_* vem do .env.local do proprio vite-project (bind-mount).
+  frontend:
+    image: node:22-slim
+    container_name: autojuri_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      # Liga file-watch por polling no vite.config (hot-reload no bind mount Win).
+      - VITE_DOCKER=1
+    volumes:
+      - "./Front end/vite-project:/app"
+      # node_modules Linux isolado do host (Windows) — nao sobrescreve o do host.
+      - frontend_node_modules:/app/node_modules
+    restart: unless-stopped
+
 volumes:
   n8n_data:
     name: autojuri_n8n_data
   hf_cache:
     name: autojuri_hf_cache
+  frontend_node_modules:
+    name: autojuri_frontend_node_modules

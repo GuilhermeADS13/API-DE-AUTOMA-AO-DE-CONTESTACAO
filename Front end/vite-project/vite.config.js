@@ -6,9 +6,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Bind em 0.0.0.0 pra ser acessivel de fora do container.
+    host: true,
     // Aceita Host header de qualquer dominio (necessario para tuneis tipo
     // cloudflared/ngrok exporem o frontend pra extensoes externas).
     allowedHosts: true,
+    // Em Docker no Windows o inotify do bind mount nao propaga; usa polling
+    // pra o hot-reload funcionar. Ligado so quando VITE_DOCKER=1 (compose).
+    watch: process.env.VITE_DOCKER
+      ? { usePolling: true, interval: 300 }
+      : undefined,
   },
   test: {
     globals: true,
