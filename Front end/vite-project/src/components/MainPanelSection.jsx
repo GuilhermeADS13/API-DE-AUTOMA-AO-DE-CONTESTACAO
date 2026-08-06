@@ -355,7 +355,7 @@ export default function MainPanelSection({
                     {/* PR5 multi-docs: anexos opcionais (max 5, total 50MB) */}
                     <Form.Group className="mt-4">
                       <Form.Label>
-                        Documentos da petição (para a IA ler)
+                        Documentos de contexto (a IA lê — não entram na peça)
                       </Form.Label>
                       <small
                         className="d-block mb-2"
@@ -423,7 +423,7 @@ export default function MainPanelSection({
                     {/* PR15: provas embedaveis no docx final (FGTS/TRCT/laudos/prints) */}
                     <Form.Group className="mt-4">
                       <Form.Label>
-                        Provas para a peça
+                        Provas (aparecem dentro da peça)
                       </Form.Label>
                       <small
                         className="d-block mb-2"
@@ -438,7 +438,7 @@ export default function MainPanelSection({
                         checked={lerProvasIa}
                         disabled={loading}
                         onChange={(event) => onToggleLerProvasIa?.(event.target.checked)}
-                        label="Deixar a IA ler estes documentos (OCR) para extrair valores, datas e jornada e fundamentar a defesa"
+                        label="Extrair os valores destas provas (OCR) para a IA citar na defesa — ex.: saldo do FGTS, valor do TRCT, jornada do ponto"
                       />
                       <div className="d-flex align-items-center gap-2 flex-wrap">
                         <Button
