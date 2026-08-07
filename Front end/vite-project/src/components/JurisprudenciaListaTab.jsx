@@ -212,7 +212,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
 
       <Form onSubmit={handleSearch} className="mb-3">
         <Row className="g-2 align-items-end">
-          <Col md={3}>
+          <Col md={4}>
             <Form.Label className="small mb-1">Tribunal</Form.Label>
             <Form.Select
               size="sm"
@@ -224,7 +224,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               ))}
             </Form.Select>
           </Col>
-          <Col md={3}>
+          <Col md={4}>
             <Form.Label className="small mb-1">Area</Form.Label>
             <Form.Select
               size="sm"
@@ -236,7 +236,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               ))}
             </Form.Select>
           </Col>
-          <Col md={3}>
+          <Col md={4}>
             <Form.Label className="small mb-1">
               Busca (numero, ementa ou relator)
             </Form.Label>
@@ -248,7 +248,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               onChange={(e) => setBuscaInput(e.target.value)}
             />
           </Col>
-          <Col md={3} className="d-flex gap-1 flex-wrap">
+          <Col md={12} className="d-flex gap-2 justify-content-end mt-2">
             <Button
               size="sm"
               type="submit"

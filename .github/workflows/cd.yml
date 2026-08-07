@@ -37,6 +37,10 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Deploy no Vercel (produção)
+        # Roda a partir da RAIZ do repo (nao de Front end/vite-project): o
+        # projeto no Vercel ja tem Root Directory=Front end/vite-project, entao
+        # deployar de dentro dessa pasta dobrava o caminho e falhava.
+        working-directory: ${{ github.workspace }}
         run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
