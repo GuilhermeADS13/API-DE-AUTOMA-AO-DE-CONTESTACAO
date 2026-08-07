@@ -2691,8 +2691,19 @@ h6,
   box-shadow: 0 0 0 0.18rem var(--ring);
 }
 
-/* Tabela */
+/* Tabela — sobrescreve as CSS vars do Bootstrap pro tema escuro. Sem isto o
+   Bootstrap usa --bs-table-bg: #fff nas celulas (linhas pares ficam brancas
+   com texto claro = ilegivel). transparent faz herdar o painel escuro. */
 .jur-admin .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--uniform-text);
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.035);
+  --bs-table-striped-color: var(--uniform-text);
+  --bs-table-hover-bg: rgba(208, 178, 122, 0.1);
+  --bs-table-hover-color: var(--uniform-text);
+  --bs-table-active-bg: rgba(208, 178, 122, 0.14);
+  --bs-table-active-color: var(--uniform-text);
+  --bs-table-border-color: var(--uniform-border);
   color: var(--uniform-text);
   border-color: var(--uniform-border);
   margin-bottom: 0;
