@@ -150,7 +150,7 @@ async def criar_jurisprudencia(
 @limiter.limit("60/minute")
 async def listar(
     request: Request,
-    limit: int = Query(default=25, ge=1, le=100),
+    limit: int = Query(default=25, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     tribunal: str | None = Query(default=None, max_length=20),
     area_juridica: str | None = Query(default=None, max_length=40),

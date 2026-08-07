@@ -75,9 +75,12 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
         setLoading(false);
         return;
       }
+      // Paginacao client-side: busca TODAS as linhas do filtro de uma vez e
+      // pagina no navegador — trocar de pagina fica instantaneo (sem novo
+      // round-trip ao pooler, que custava ~500ms-9s por pagina).
       const params = new URLSearchParams({
-        limit: String(PAGE_SIZE),
-        offset: String(page * PAGE_SIZE),
+        limit: "500",
+        offset: "0",
       });
       if (filtros.tribunal) params.set("tribunal", filtros.tribunal);
       if (filtros.area_juridica) params.set("area_juridica", filtros.area_juridica);
@@ -103,11 +106,19 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
     } finally {
       setLoading(false);
     }
-  }, [filtros, getAccessToken, page]);
+  }, [filtros, getAccessToken]);
 
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // Qualquer mudanca de filtro volta pra pagina 1 (evita pagina fora do range).
+  useEffect(() => {
+    setPage(0);
+  }, [filtros]);
+
+  // Fatia da pagina atual — paginacao 100% no cliente sobre `items` (ja tem tudo).
+  const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -225,7 +236,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               ))}
             </Form.Select>
           </Col>
-          <Col md={4}>
+          <Col md={3}>
             <Form.Label className="small mb-1">
               Busca (numero, ementa ou relator)
             </Form.Label>
@@ -237,7 +248,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               onChange={(e) => setBuscaInput(e.target.value)}
             />
           </Col>
-          <Col md={2} className="d-flex gap-1">
+          <Col md={3} className="d-flex gap-1 flex-wrap">
             <Button
               size="sm"
               type="submit"
@@ -307,7 +318,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
                 </td>
               </tr>
             )}
-            {items.map((item) => (
+            {pageItems.map((item) => (
               <tr key={item.id}>
                 <td><span className="jur-trib">{item.tribunal}</span></td>
                 <td><span className="jur-num">{item.numero_processo}</span></td>

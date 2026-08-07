@@ -1910,7 +1910,7 @@ def listar_jurisprudencia(
     - busca: ILIKE no numero_processo OU ementa OU relator
     """
     _ensure_db_initialized()
-    safe_limit = max(1, min(int(limit), 100))
+    safe_limit = max(1, min(int(limit), 500))
     safe_offset = max(0, int(offset))
     area = area_juridica if area_juridica in AREAS_JURIDICAS_CANONICAS else None
     tribunal_norm = tribunal.strip() if tribunal else None
