@@ -264,7 +264,7 @@ export default function JurisprudenciaListaTab({ getAccessToken }) {
               onClick={handleResetFiltros}
               disabled={loading}
             >
-              Limpar
+              Limpar filtros
             </Button>
             <Button
               size="sm"
